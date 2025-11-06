@@ -50,21 +50,20 @@ let ValidationMessageController = ValidationMessageController_1 = class Validati
     }
     async verifyBVN(dto) {
         this.logger.log(`➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.accountNumber}, Bank: ${dto.bankCode}`);
-        if (!dto.bvn || !dto.accountNumber || !dto.bankCode || !dto.firstName || !dto.lastName) {
+        if (!dto.bvn || !dto.accountNumber || !dto.bankCode) {
             throw new common_1.BadRequestException('bvn, accountNumber, bankCode, firstName & lastName are required');
         }
         try {
             // ✅ Passing null for actor for now
-            return await this.service.verifyBVNWithAccount(dto, null);
+            return await this.service.verifyBVNWithAccount(dto);
         }
         catch (err) {
             this.logger.error('[bvn.verify] Error', err);
             throw new common_1.InternalServerErrorException(err?.message || 'BVN verification failed');
         }
     }
-    testPing() {
-        console.log('✅ Crypt2P received PING from Gateway');
-        return { msg: 'PONG from Crypt2P ✅' };
+    processWebhook(payload) {
+        return this.service.processPaystackWebhook(payload);
     }
 };
 exports.ValidationMessageController = ValidationMessageController;
@@ -90,11 +89,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ValidationMessageController.prototype, "verifyBVN", null);
 __decorate([
-    (0, microservices_1.MessagePattern)({ cmd: 'ping' }),
+    (0, microservices_1.MessagePattern)({ cmd: 'paystack.kyc.webhook' }),
+    __param(0, (0, microservices_1.Payload)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
-], ValidationMessageController.prototype, "testPing", null);
+], ValidationMessageController.prototype, "processWebhook", null);
 exports.ValidationMessageController = ValidationMessageController = ValidationMessageController_1 = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [validation_service_1.ValidationService])

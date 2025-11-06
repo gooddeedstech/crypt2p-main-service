@@ -14,7 +14,7 @@ const typeorm_1 = require("typeorm");
 var ActorType;
 (function (ActorType) {
     ActorType["ADMIN"] = "ADMIN";
-    ActorType["TAXPAYER"] = "TAXPAYER";
+    ActorType["USER"] = "USER";
     ActorType["SYSTEM"] = "SYSTEM";
 })(ActorType || (exports.ActorType = ActorType = {}));
 let AuditLog = class AuditLog {

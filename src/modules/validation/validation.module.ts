@@ -10,6 +10,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { FraudService } from '../fraud/fraud.service';
 import { AuditLog } from '@/entities/audit-log.entity';
 import { ValidationMessageController } from './validation.message.controller';
+import { User } from '@/entities/user.entity';
 
 
 
@@ -18,7 +19,8 @@ import { ValidationMessageController } from './validation.message.controller';
     ConfigModule,
     TypeOrmModule.forFeature([
       ValidationLog,
-      AuditLog
+      AuditLog, 
+      User
     ]),
   ],
 

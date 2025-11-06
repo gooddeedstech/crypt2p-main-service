@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
 import axios from 'axios';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -7,6 +7,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { FraudService } from '../fraud/fraud.service';
 import { ActorType } from '@/entities/audit-log.entity'; 
 import { VerifyBvnDto } from './dtos/verify-bvn.dto';
+import { BvnStatus, KycLevel, User } from '@/entities/user.entity';
 
 @Injectable()
 export class ValidationService {
@@ -17,6 +18,8 @@ export class ValidationService {
   constructor(
     @InjectRepository(ValidationLog)
     private readonly logRepo: Repository<ValidationLog>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
     private readonly audit: AuditLogService,
     private readonly fraud: FraudService,
   ) {}
@@ -89,78 +92,123 @@ export class ValidationService {
       throw new HttpException(errMsg, err.response?.status ?? HttpStatus.BAD_GATEWAY);
     }
   }
-async verifyBVNWithAccount(
-  dto: VerifyBvnDto,
-  actor?: any, // Optional Actor
-) {
-  const { bvn, accountNumber, bankCode, firstName, lastName } = dto;
 
-  const expectedName = `${firstName} ${lastName}`.trim();
+async verifyBVNWithAccount(dto: VerifyBvnDto) {
+  const { email, bvn, accountNumber, bankCode } = dto;
 
-  try {
-    const payload = {
-      country: 'NG',
-      type: 'bank_account',
-      account_number: accountNumber,
-      bvn,
-      bank_code: bankCode,
-      first_name: firstName,
-      last_name: lastName,
-    };
-    console.log(JSON.stringify(actor))
+  const user = await this.usersRepo.findOne({ where: { email } });
+  if (!user) throw new NotFoundException('Invalid email');
 
-    const url = actor?.customerCode
-      ? `https://api.paystack.co/customer/${actor.customerCode}/identification`
-      : `https://api.paystack.co/bank/resolve_bvn/${bvn}`; // ✅ fallback for development
+  if (!user.paystackCustomerCode) {
+    throw new ForbiddenException('Customer Code missing');
+  }
 
-    const res = await axios.post(url, payload, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
+  const payload = {
+    country: 'NG',
+    type: 'bank_account',
+    account_number: accountNumber,
+    bank_code: bankCode,
+    bvn,
+  };
 
-    const result = res?.data?.data;
-    const actualName = result?.account_name?.trim();
+  const url = `https://api.paystack.co/customer/${user.paystackCustomerCode}/identification`;
 
-    // ✅ Local fraud check
-    const nameMatch = this.fraud.evaluateNameMatch(expectedName, actualName);
+  await axios.post(url, payload, {
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-    const response = {
-      status: true,
-      message: 'BVN Verified Successfully ✅',
-      verified: true,
-      provider: 'paystack',
-      bvn,
-      accountNumber,
-      bankCode,
-      expectedName,
-      actualName,
-      matchPercent: nameMatch.matchPercent,
-      fraud: nameMatch,
-      requiresCustomerCode: !actor?.customerCode, // ✅ show missing upgrade requirement
-      timestamp: new Date(),
-    };
+  return {
+    message: 'KYC verification in progress ✅',
+    status: 'pending',
+    next: 'Wait for webhook confirmation',
+  };
+}
+
+async processPaystackWebhook(event: any) {
+  const { event: type, data } = event;
+
+  const customerCode = data.customer?.customer_code;
+  if (!customerCode) return;
+
+  const user = await this.usersRepo.findOne({
+    where: { paystackCustomerCode: customerCode },
+  });
+  if (!user) return;
+
+  // ✅ Common data extraction
+  const actualName = data?.account_name?.trim() ?? '';
+  const expectedName = `${user.firstName} ${user.lastName}`.trim();
+
+  const fraudCheck = this.fraud.evaluateNameMatch(expectedName, actualName);
+
+  // =====================================================
+  // ✅ SUCCESS EVENT
+  // =====================================================
+  if (type === 'customeridentification.success') {
+    user.bvnStatus = BvnStatus.VERIFIED;
+    user.kycLevel = KycLevel.BASIC;
+    user.bvnLastCheckedAt = new Date();
+    user.bankCode = data?.identification?.bank_code;
+    user.bankAccountNo = data?.identification?.account_number;
+
+    await this.usersRepo.save(user);
 
     await this.audit.write({
-      actorId: actor?.id ?? 'system',
-      actorType: actor?.type ?? ActorType.SYSTEM,
-      action: 'BVN_VERIFY',
-      targetId: bvn,
-      requestPayload: dto,
-      responseData: response,
+      actorId: user.id,
+      actorType: ActorType.USER,
+      action: 'BVN_VERIFY_SUCCESS',
+      targetId: data?.bvn,
+      responseData: { expectedName, actualName, fraudCheck },
     });
 
-    await this.writeValidationLog('BVN_VERIFY', dto, response);
-
-    return response;
-
-  } catch (err: any) {
-    this.logger.error('[BVN_VERIFY ERROR]', err?.response?.data || err);
-    throw new HttpException(
-      err.response?.data?.message || 'BVN verification failed',
-      err.response?.status ?? HttpStatus.BAD_GATEWAY,
-    );
+    return { success: true, status: 'bvn_verified' };
   }
+
+  // =====================================================
+  // 🔴 FAILED EVENT
+  // =====================================================
+  if (type === 'customeridentification.failed') {
+    user.bvnStatus = BvnStatus.FAILED;
+    user.bvnFailureReason = data?.reason || 'Incorrect name/BVN mismatch';
+    user.bvnLastCheckedAt = new Date();
+
+    await this.usersRepo.save(user);
+
+    await this.audit.write({
+      actorId: user.id,
+      actorType: ActorType.USER,
+      action: 'BVN_VERIFY_FAILED',
+      targetId: data?.bvn,
+      responseData: data,
+    });
+
+    return { success: true, status: 'bvn_failed' };
+  }
+
+  // =====================================================
+  // ⏳ ABANDONED EVENT
+  // =====================================================
+  if (type === 'customeridentification.abandoned') {
+    user.bvnStatus = BvnStatus.PENDING;
+    user.bvnFailureReason = 'User abandoned verification';
+    user.bvnLastCheckedAt = new Date();
+
+    await this.usersRepo.save(user);
+
+    await this.audit.write({
+      actorId: user.id,
+      actorType: ActorType.USER,
+      action: 'BVN_VERIFY_ABANDONED',
+      targetId: data?.bvn,
+      responseData: data,
+    });
+
+    return { success: true, status: 'bvn_pending' };
+  }
+
+  return { success: true, status: 'ignored_event' };
 }
 }

@@ -8,7 +8,7 @@ import {
 
 export enum ActorType {
   ADMIN = 'ADMIN',
-  TAXPAYER = 'TAXPAYER',
+  USER = 'USER',
   SYSTEM = 'SYSTEM',
 }
 

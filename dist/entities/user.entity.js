@@ -9,13 +9,33 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.User = void 0;
+exports.User = exports.BvnStatus = exports.KycLevel = exports.Gender = void 0;
 const typeorm_1 = require("typeorm");
 const wallet_entity_1 = require("./wallet.entity");
 const deposit_entity_1 = require("./deposit.entity");
 const payout_entity_1 = require("./payout.entity");
 const ledger_entity_1 = require("./ledger.entity");
+var Gender;
+(function (Gender) {
+    Gender["MALE"] = "male";
+    Gender["FEMALE"] = "female";
+})(Gender || (exports.Gender = Gender = {}));
+var KycLevel;
+(function (KycLevel) {
+    KycLevel[KycLevel["UNVERIFIED"] = 0] = "UNVERIFIED";
+    KycLevel[KycLevel["BASIC"] = 1] = "BASIC";
+    KycLevel[KycLevel["FULL"] = 2] = "FULL";
+})(KycLevel || (exports.KycLevel = KycLevel = {}));
+var BvnStatus;
+(function (BvnStatus) {
+    BvnStatus["PENDING"] = "pending";
+    BvnStatus["VERIFIED"] = "verified";
+    BvnStatus["FAILED"] = "failed";
+})(BvnStatus || (exports.BvnStatus = BvnStatus = {}));
 let User = class User {
+    get fullName() {
+        return `${this.firstName} ${this.lastName}`;
+    }
 };
 exports.User = User;
 __decorate([
@@ -23,17 +43,87 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "id", void 0);
 __decorate([
+    (0, typeorm_1.Index)(),
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], User.prototype, "fullName", void 0);
+], User.prototype, "firstName", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], User.prototype, "lastName", void 0);
+__decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ unique: true }),
+    __metadata("design:type", String)
+], User.prototype, "phoneNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], User.prototype, "country", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "dob", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: Gender, nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "gender", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], User.prototype, "passwordHash", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "pinHash", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "pinEnabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isDisabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "failedPinAttempts", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "pinLockedUntil", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "lastLoginAt", void 0);
+__decorate([
+    (0, typeorm_1.DeleteDateColumn)(),
+    __metadata("design:type", Date)
+], User.prototype, "deletedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "emailVerified", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "emailVerifiedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "paystackCustomerCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "virtualAccountNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "bankName", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
@@ -43,21 +133,45 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "bankCode", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => wallet_entity_1.Wallet, w => w.user),
+    (0, typeorm_1.Column)({ type: 'enum', enum: KycLevel, default: KycLevel.UNVERIFIED }),
+    __metadata("design:type", Number)
+], User.prototype, "kycLevel", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'enum', enum: BvnStatus, default: BvnStatus.PENDING }),
+    __metadata("design:type", String)
+], User.prototype, "bvnStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "bvnFailureReason", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "bvnLastCheckedAt", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => wallet_entity_1.Wallet, (w) => w.user),
     __metadata("design:type", Array)
 ], User.prototype, "wallets", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => deposit_entity_1.Deposit, d => d.user),
+    (0, typeorm_1.OneToMany)(() => deposit_entity_1.Deposit, (d) => d.user),
     __metadata("design:type", Array)
 ], User.prototype, "deposits", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => payout_entity_1.Payout, p => p.user),
+    (0, typeorm_1.OneToMany)(() => payout_entity_1.Payout, (p) => p.user),
     __metadata("design:type", Array)
 ], User.prototype, "payouts", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => ledger_entity_1.LedgerEntry, l => l.user),
+    (0, typeorm_1.OneToMany)(() => ledger_entity_1.LedgerEntry, (l) => l.user),
     __metadata("design:type", Array)
 ], User.prototype, "ledger", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], User.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)(),
+    __metadata("design:type", Date)
+], User.prototype, "updatedAt", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

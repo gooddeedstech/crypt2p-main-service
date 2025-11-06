@@ -54,7 +54,7 @@ async verifyBVN(@Payload() dto: VerifyBvnDto) {
     `➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.accountNumber}, Bank: ${dto.bankCode}`,
   );
 
-  if (!dto.bvn || !dto.accountNumber || !dto.bankCode || !dto.firstName || !dto.lastName) {
+  if (!dto.bvn || !dto.accountNumber || !dto.bankCode ) {
     throw new BadRequestException(
       'bvn, accountNumber, bankCode, firstName & lastName are required'
     );
@@ -62,7 +62,7 @@ async verifyBVN(@Payload() dto: VerifyBvnDto) {
 
   try {
     // ✅ Passing null for actor for now
-    return await this.service.verifyBVNWithAccount(dto, null);
+    return await this.service.verifyBVNWithAccount(dto);
   } catch (err) {
     this.logger.error('[bvn.verify] Error', err);
     throw new InternalServerErrorException(
@@ -71,9 +71,10 @@ async verifyBVN(@Payload() dto: VerifyBvnDto) {
   }
 }
 
-   @MessagePattern({ cmd: 'ping' })
-  testPing() {
-    console.log('✅ Crypt2P received PING from Gateway');
-    return { msg: 'PONG from Crypt2P ✅' };
+ @MessagePattern({ cmd: 'paystack.kyc.webhook' })
+  processWebhook(@Payload() payload: any) {
+    return this.service.processPaystackWebhook(payload);
   }
+
+  
 }

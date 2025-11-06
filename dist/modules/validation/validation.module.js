@@ -16,6 +16,7 @@ const audit_log_service_1 = require("../audit-log/audit-log.service");
 const fraud_service_1 = require("../fraud/fraud.service");
 const audit_log_entity_1 = require("../../entities/audit-log.entity");
 const validation_message_controller_1 = require("./validation.message.controller");
+const user_entity_1 = require("../../entities/user.entity");
 let ValidationModule = class ValidationModule {
 };
 exports.ValidationModule = ValidationModule;
@@ -25,7 +26,8 @@ exports.ValidationModule = ValidationModule = __decorate([
             config_1.ConfigModule,
             typeorm_1.TypeOrmModule.forFeature([
                 validation_log_entity_1.ValidationLog,
-                audit_log_entity_1.AuditLog
+                audit_log_entity_1.AuditLog,
+                user_entity_1.User
             ]),
         ],
         controllers: [

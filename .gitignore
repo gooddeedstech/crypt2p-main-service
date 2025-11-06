@@ -11,9 +11,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Environment files
+
 .env
-.env.*
-!.env.example
+*.env
+*.local.env
 
 # OS files
 .DS_Store

@@ -25,9 +25,11 @@ const validation_log_entity_1 = require("../../entities/validation-log.entity");
 const audit_log_service_1 = require("../audit-log/audit-log.service");
 const fraud_service_1 = require("../fraud/fraud.service");
 const audit_log_entity_1 = require("../../entities/audit-log.entity");
+const user_entity_1 = require("../../entities/user.entity");
 let ValidationService = ValidationService_1 = class ValidationService {
-    constructor(logRepo, audit, fraud) {
+    constructor(logRepo, usersRepo, audit, fraud) {
         this.logRepo = logRepo;
+        this.usersRepo = usersRepo;
         this.audit = audit;
         this.fraud = fraud;
         this.logger = new common_1.Logger(ValidationService_1.name);
@@ -93,70 +95,111 @@ let ValidationService = ValidationService_1 = class ValidationService {
             throw new common_1.HttpException(errMsg, err.response?.status ?? common_1.HttpStatus.BAD_GATEWAY);
         }
     }
-    async verifyBVNWithAccount(dto, actor) {
-        const { bvn, accountNumber, bankCode, firstName, lastName } = dto;
-        const expectedName = `${firstName} ${lastName}`.trim();
-        try {
-            const payload = {
-                country: 'NG',
-                type: 'bank_account',
-                account_number: accountNumber,
-                bvn,
-                bank_code: bankCode,
-                first_name: firstName,
-                last_name: lastName,
-            };
-            console.log(JSON.stringify(actor));
-            const url = actor?.customerCode
-                ? `https://api.paystack.co/customer/${actor.customerCode}/identification`
-                : `https://api.paystack.co/bank/resolve_bvn/${bvn}`; // ✅ fallback for development
-            const res = await axios_1.default.post(url, payload, {
-                headers: {
-                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            const result = res?.data?.data;
-            const actualName = result?.account_name?.trim();
-            // ✅ Local fraud check
-            const nameMatch = this.fraud.evaluateNameMatch(expectedName, actualName);
-            const response = {
-                status: true,
-                message: 'BVN Verified Successfully ✅',
-                verified: true,
-                provider: 'paystack',
-                bvn,
-                accountNumber,
-                bankCode,
-                expectedName,
-                actualName,
-                matchPercent: nameMatch.matchPercent,
-                fraud: nameMatch,
-                requiresCustomerCode: !actor?.customerCode, // ✅ show missing upgrade requirement
-                timestamp: new Date(),
-            };
+    async verifyBVNWithAccount(dto) {
+        const { email, bvn, accountNumber, bankCode } = dto;
+        const user = await this.usersRepo.findOne({ where: { email } });
+        if (!user)
+            throw new common_1.NotFoundException('Invalid email');
+        if (!user.paystackCustomerCode) {
+            throw new common_1.ForbiddenException('Customer Code missing');
+        }
+        const payload = {
+            country: 'NG',
+            type: 'bank_account',
+            account_number: accountNumber,
+            bank_code: bankCode,
+            bvn,
+        };
+        const url = `https://api.paystack.co/customer/${user.paystackCustomerCode}/identification`;
+        await axios_1.default.post(url, payload, {
+            headers: {
+                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        return {
+            message: 'KYC verification in progress ✅',
+            status: 'pending',
+            next: 'Wait for webhook confirmation',
+        };
+    }
+    async processPaystackWebhook(event) {
+        const { event: type, data } = event;
+        const customerCode = data.customer?.customer_code;
+        if (!customerCode)
+            return;
+        const user = await this.usersRepo.findOne({
+            where: { paystackCustomerCode: customerCode },
+        });
+        if (!user)
+            return;
+        // ✅ Common data extraction
+        const actualName = data?.account_name?.trim() ?? '';
+        const expectedName = `${user.firstName} ${user.lastName}`.trim();
+        const fraudCheck = this.fraud.evaluateNameMatch(expectedName, actualName);
+        // =====================================================
+        // ✅ SUCCESS EVENT
+        // =====================================================
+        if (type === 'customeridentification.success') {
+            user.bvnStatus = user_entity_1.BvnStatus.VERIFIED;
+            user.kycLevel = user_entity_1.KycLevel.BASIC;
+            user.bvnLastCheckedAt = new Date();
+            user.bankCode = data?.identification?.bank_code;
+            user.bankAccountNo = data?.identification?.account_number;
+            await this.usersRepo.save(user);
             await this.audit.write({
-                actorId: actor?.id ?? 'system',
-                actorType: actor?.type ?? audit_log_entity_1.ActorType.SYSTEM,
-                action: 'BVN_VERIFY',
-                targetId: bvn,
-                requestPayload: dto,
-                responseData: response,
+                actorId: user.id,
+                actorType: audit_log_entity_1.ActorType.USER,
+                action: 'BVN_VERIFY_SUCCESS',
+                targetId: data?.bvn,
+                responseData: { expectedName, actualName, fraudCheck },
             });
-            await this.writeValidationLog('BVN_VERIFY', dto, response);
-            return response;
+            return { success: true, status: 'bvn_verified' };
         }
-        catch (err) {
-            this.logger.error('[BVN_VERIFY ERROR]', err?.response?.data || err);
-            throw new common_1.HttpException(err.response?.data?.message || 'BVN verification failed', err.response?.status ?? common_1.HttpStatus.BAD_GATEWAY);
+        // =====================================================
+        // 🔴 FAILED EVENT
+        // =====================================================
+        if (type === 'customeridentification.failed') {
+            user.bvnStatus = user_entity_1.BvnStatus.FAILED;
+            user.bvnFailureReason = data?.reason || 'Incorrect name/BVN mismatch';
+            user.bvnLastCheckedAt = new Date();
+            await this.usersRepo.save(user);
+            await this.audit.write({
+                actorId: user.id,
+                actorType: audit_log_entity_1.ActorType.USER,
+                action: 'BVN_VERIFY_FAILED',
+                targetId: data?.bvn,
+                responseData: data,
+            });
+            return { success: true, status: 'bvn_failed' };
         }
+        // =====================================================
+        // ⏳ ABANDONED EVENT
+        // =====================================================
+        if (type === 'customeridentification.abandoned') {
+            user.bvnStatus = user_entity_1.BvnStatus.PENDING;
+            user.bvnFailureReason = 'User abandoned verification';
+            user.bvnLastCheckedAt = new Date();
+            await this.usersRepo.save(user);
+            await this.audit.write({
+                actorId: user.id,
+                actorType: audit_log_entity_1.ActorType.USER,
+                action: 'BVN_VERIFY_ABANDONED',
+                targetId: data?.bvn,
+                responseData: data,
+            });
+            return { success: true, status: 'bvn_pending' };
+        }
+        return { success: true, status: 'ignored_event' };
     }
 };
 exports.ValidationService = ValidationService;
 exports.ValidationService = ValidationService = ValidationService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(validation_log_entity_1.ValidationLog)),
+    __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         audit_log_service_1.AuditLogService,
         fraud_service_1.FraudService])
 ], ValidationService);
