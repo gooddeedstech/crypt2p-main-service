@@ -39,6 +39,8 @@ async function bootstrap() {
   const rmqUrl = process.env.RABBITMQ_URL;
   const rmqQueue = process.env.CRYPT2P_QUEUE || 'crypt2p_queue';
 
+  console.log("🚨 RABBIT URL =", process.env.RABBITMQ_URL);
+
   if (rmqUrl) {
     logger.log(`🔄 RabbitMQ detected → Connecting to ${rmqUrl}`);
 
