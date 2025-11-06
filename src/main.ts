@@ -35,7 +35,7 @@ async function bootstrap() {
   const rmqUser = process.env.RABBITMQ_USER;
   const rmqPass = encodeURIComponent(process.env.RABBITMQ_PASS || '');
   const rmqVhost = encodeURIComponent(process.env.RABBITMQ_VHOST || '/');
-  const rmqQueue = process.env.CRYPT2P_QUEUE || 'crypt2p_queue';
+  const rmqQueue = process.env.VALIDATION_QUEUE;
 
   let rmqUrl = null;
 
