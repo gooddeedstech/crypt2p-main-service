@@ -228,7 +228,7 @@ export class EmailService {
       href="https://app.crypt2p.com/reset-password?email=${encodeURIComponent(email)}&code=${code}">
       Reset Password
     </a>
-
+  
     <p>This code expires in <b>${expiresIn} minutes</b> and can only be used once.</p>
 
     <p>If you did not request a password reset, please secure your account.</p>
