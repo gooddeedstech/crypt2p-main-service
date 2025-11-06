@@ -9,28 +9,22 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const logger = new Logger('Crypt2P');
 
-  // ✅ Create HTTP App
+  // ✅ HTTP App Instance
   const app = await NestFactory.create(AppModule);
+
   app.use(helmet());
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.enableCors();
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
-  // ✅ Create RMQ Microservice Listener (same app instance = hybrid)
-app.connectMicroservice<MicroserviceOptions>({
-  transport: Transport.RMQ,
-  options: {
-    urls: [process.env.RABBITMQ_URL],
-    queue: process.env.VALIDATION_QUEUE || 'validation_queue',
-    queueOptions: { durable: true },
-    heartbeat: 60, // ✅ correct field for NestJS v10
-    prefetchCount: 1,
-  },
-});
-
-  // ✅ Swagger docs
+  // ✅ Swagger Documentation for Crypt2P
   const config = new DocumentBuilder()
-    .setTitle('Crypt2P Service')
-    .setDescription('Crypto <-> NGN trading engine')
+    .setTitle('Crypt2P Trading Engine')
+    .setDescription('Crypto <-> Naira real-time exchange service')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();
@@ -38,12 +32,42 @@ app.connectMicroservice<MicroserviceOptions>({
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 4007);
-console.log(`test${process.env.RABBITMQ_URL} - ${process.env.CRYPT2P_QUEUE}`)
-  logger.log(`✅ Crypt2P HTTP on http://localhost:${process.env.PORT ?? 4007}`);
-  logger.log(`✅ RabbitMQ Listener ON → Queue: ${process.env.CRYPT2P_QUEUE}`);
-  logger.log(`📘 Swagger Docs → /docs`);
+  /* --------------------------------------------------------
+    ✅ RMQ Microservice (Optional)
+    Connect ONLY if RabbitMQ URL available in ENV
+  ---------------------------------------------------------*/
+  const rmqUrl = process.env.RABBITMQ_URL;
+  const rmqQueue = process.env.CRYPT2P_QUEUE || 'crypt2p_queue';
+
+  if (rmqUrl) {
+    logger.log(`🔄 RabbitMQ detected → Connecting to ${rmqUrl}`);
+
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [rmqUrl],
+        queue: rmqQueue,
+        queueOptions: { durable: true },
+        heartbeat: 60,
+        prefetchCount: 1,
+      },
+    });
+
+    await app.startAllMicroservices();
+    logger.log(`✅ RMQ Microservice listening → Queue: ${rmqQueue}`);
+  } else {
+    logger.warn('⚠ RMQ disabled → Missing RABBITMQ_URL');
+  }
+
+  /* --------------------------------------------------------
+    ✅ Start HTTP Server
+  ---------------------------------------------------------*/
+  const port = process.env.PORT || 4007;
+  await app.listen(port);
+
+  logger.log(`🚀 Crypt2P HTTP running on http://localhost:${port}`);
+  logger.log(`📘 Swagger Docs → http://localhost:${port}/docs`);
+  logger.log('✅ App Ready');
 }
 
 bootstrap();
