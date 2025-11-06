@@ -31,6 +31,7 @@ import { PayoutModule } from './modules/payout/payout.module';
 import { NotifyModule } from './modules/notify/notify.module';
 import { ValidationModule } from './modules/validation/validation.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { BushaAPIModule } from './modules/busha-service/busha-api.module';
 
 // ✅ Environment validation using Zod
 const envSchema = z.object({
@@ -92,7 +93,8 @@ const envSchema = z.object({
     PayoutModule,
     NotifyModule,
     ValidationModule,
-    OnboardingModule, // ✅ User onboarding now included
+    OnboardingModule, 
+    BushaAPIModule,
   ],
 })
 export class AppModule {}

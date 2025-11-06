@@ -26,6 +26,7 @@ const payout_module_1 = require("./modules/payout/payout.module");
 const notify_module_1 = require("./modules/notify/notify.module");
 const validation_module_1 = require("./modules/validation/validation.module");
 const onboarding_module_1 = require("./modules/onboarding/onboarding.module");
+const busha_api_module_1 = require("./modules/busha-service/busha-api.module");
 // ✅ Environment validation using Zod
 const envSchema = zod_1.z.object({
     DATABASE_URL: zod_1.z.string().min(1, 'DATABASE_URL is required'),
@@ -84,7 +85,8 @@ exports.AppModule = AppModule = __decorate([
             payout_module_1.PayoutModule,
             notify_module_1.NotifyModule,
             validation_module_1.ValidationModule,
-            onboarding_module_1.OnboardingModule, // ✅ User onboarding now included
+            onboarding_module_1.OnboardingModule,
+            busha_api_module_1.BushaAPIModule,
         ],
     })
 ], AppModule);
