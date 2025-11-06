@@ -8,23 +8,17 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const logger = new Logger('Crypt2P');
-
-  // ✅ HTTP App Instance
   const app = await NestFactory.create(AppModule);
 
+  // ✅ Security + CORS
   app.use(helmet());
   app.enableCors();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  // ✅ Swagger Documentation for Crypt2P
+  // ✅ Swagger API Docs
   const config = new DocumentBuilder()
     .setTitle('Crypt2P Trading Engine')
-    .setDescription('Crypto <-> Naira real-time exchange service')
+    .setDescription('Crypto <-> NGN real-time trading & wallet automation')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();
@@ -33,16 +27,30 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   /* --------------------------------------------------------
-    ✅ RMQ Microservice (Optional)
-    Connect ONLY if RabbitMQ URL available in ENV
+    ✅ Build RabbitMQ Connection String (Encoded)
   ---------------------------------------------------------*/
-  const rmqUrl = process.env.RABBITMQ_URL;
+
+  const rmqHost = process.env.RABBITMQ_HOST;
+  const rmqPort = process.env.RABBITMQ_PORT || '5672';
+  const rmqUser = process.env.RABBITMQ_USER;
+  const rmqPass = encodeURIComponent(process.env.RABBITMQ_PASS || '');
+  const rmqVhost = encodeURIComponent(process.env.RABBITMQ_VHOST || '/');
   const rmqQueue = process.env.CRYPT2P_QUEUE || 'crypt2p_queue';
 
-  console.log("🚨 RABBIT URL =", process.env.RABBITMQ_URL);
+  let rmqUrl = null;
 
+  if (rmqHost && rmqUser && rmqPass) {
+    rmqUrl = `amqp://${rmqUser}:${rmqPass}@${rmqHost}:${rmqPort}/${rmqVhost}`;
+  }
+
+  console.log('🚨 RabbitMQ HOST:', rmqHost);
+  console.log('🔐 Encoded RabbitMQ URL:', rmqUrl);
+
+  /* --------------------------------------------------------
+    ✅ RMQ Microservice Bootstrap
+  ---------------------------------------------------------*/
   if (rmqUrl) {
-    logger.log(`🔄 RabbitMQ detected → Connecting to ${rmqUrl}`);
+    logger.log(`🔄 Connecting to RabbitMQ... → ${rmqUrl}`);
 
     app.connectMicroservice<MicroserviceOptions>({
       transport: Transport.RMQ,
@@ -58,7 +66,7 @@ async function bootstrap() {
     await app.startAllMicroservices();
     logger.log(`✅ RMQ Microservice listening → Queue: ${rmqQueue}`);
   } else {
-    logger.warn('⚠ RMQ disabled → Missing RABBITMQ_URL');
+    logger.warn('⚠ RMQ disabled — Host/User/Pass missing in ENV');
   }
 
   /* --------------------------------------------------------
@@ -67,8 +75,8 @@ async function bootstrap() {
   const port = process.env.PORT || 4007;
   await app.listen(port);
 
-  logger.log(`🚀 Crypt2P HTTP running on http://localhost:${port}`);
-  logger.log(`📘 Swagger Docs → http://localhost:${port}/docs`);
+  logger.log(`🚀 Crypt2P Service → http://localhost:${port}`);
+  logger.log(`📘 Swagger Docs → /docs`);
   logger.log('✅ App Ready');
 }
 
