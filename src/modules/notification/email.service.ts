@@ -20,7 +20,6 @@ export class EmailService {
   }
   async sendOtp(email: string, code: string) {
     const subject = 'Verify Your Crypt2P Account';
-
     const appName = 'Crypt2P';
     const logoUrl = 'https://api.crypt2p.com/assets/logo.png'; // ✅ Replace with your real hosted logo
     const expiresIn = this.config.get('EMAIL_VERIFY_OTP_TTL') || 30;
@@ -105,12 +104,7 @@ export class EmailService {
 
     <p>Enter this OTP code in the Crypt2P app to confirm your identity:</p>
 
-    <div class="otp-box">${code}</div>
-
-    <a class="button"
-      href="https://app.crypt2p.com/verify?email=${encodeURIComponent(email)}&code=${code}">
-      Verify Email
-    </a>
+    <div class="otp-box">${code}</div> 
 
     <p>This code expires in <b>${expiresIn} minutes</b>.</p>
 
