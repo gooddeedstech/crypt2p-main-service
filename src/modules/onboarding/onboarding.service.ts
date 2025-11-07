@@ -270,10 +270,7 @@ export class OnboardingService {
       user.lastLoginAt = new Date();
       await this.users.save(user);
 
-      return {
-        ...this.issueTokens(user),
-        pinEnabled: user.pinEnabled,
-      };
+      return user;
     } catch (error) {
       if (error instanceof RpcException) throw error;
       this.logger.error('loginPin error', error);
