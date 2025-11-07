@@ -17,6 +17,7 @@ import { EmailService } from '../notification/email.service';
 import { ConfirmResetDto, LoginDto, LoginPinDto, RegisterDto, StartResetDto } from './dto/dtos';
 import { OtpUtil } from '@/common/otp.util';
 import { PaystackService } from '../paystack/paystack.service';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class OnboardingService {
@@ -116,14 +117,29 @@ async register(dto: RegisterDto) {
   /* --------------------------------------------------
    ✅ LOGIN WITH EMAIL + PASSWORD (Primary)
   ---------------------------------------------------*/
-  async loginPassword(dto: LoginDto) {
-    const user = await this.users.findOne({ where: { email: dto.email, deletedAt: IsNull() } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    if (user.isDisabled) throw new ForbiddenException('Account disabled');
+
+
+async loginPassword(dto: LoginDto) {
+  try {
+    const user = await this.users.findOne({
+      where: { email: dto.email, deletedAt: IsNull() },
+    });
+    if (!user) {
+  throw new RpcException({
+    statusCode: 401,
+    message: 'Invalid credentials xxx',
+  });
+}  
+if (user.isDisabled) {
+  throw new RpcException({
+    statusCode: 403,
+    message: 'Account disabled',
+  });
+}
 
     if (!(await this.compare(dto.password, user.passwordHash))) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+      throw new RpcException({ statusCode: 401, message: 'Invalid credentialsxx' });
+    } 
 
     user.lastLoginAt = new Date();
     await this.users.save(user);
@@ -131,9 +147,12 @@ async register(dto: RegisterDto) {
     return {
       ...this.issueTokens(user),
       pinEnabled: user.pinEnabled,
-      emailVerified: user.emailVerified,
     };
+  } catch (error) {
+    if (error instanceof RpcException) throw error;
+    throw new RpcException({ statusCode: 500, message: 'Unexpected error occurred' });
   }
+}
 
   /* --------------------------------------------------
    ✅ SET PIN
@@ -141,8 +160,6 @@ async register(dto: RegisterDto) {
   async setPin(userId: string, pin: string) {
     const user = await this.users.findOneBy({ id: userId });
     if (!user) throw new BadRequestException('User not found');
-
-    if (!user.emailVerified) throw new ForbiddenException('Verify your email first');
 
     user.pinHash = await this.hash(pin);
     user.pinEnabled = true;
@@ -161,7 +178,6 @@ async register(dto: RegisterDto) {
     if (!user) throw new UnauthorizedException('Invalid credentials');
     if (!user.pinEnabled) throw new ForbiddenException('PIN not set');
     if (user.isDisabled) throw new ForbiddenException('Account disabled');
-    if (!user.emailVerified) throw new ForbiddenException('Verify email first');
 
     // Check lockout
     if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
@@ -183,7 +199,7 @@ async register(dto: RegisterDto) {
     user.lastLoginAt = new Date();
     await this.users.save(user);
 
-    return this.issueTokens(user);
+    return user;
   }
 
   /* --------------------------------------------------

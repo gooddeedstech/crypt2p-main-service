@@ -89,13 +89,6 @@ export class User {
   @DeleteDateColumn()
   deletedAt?: Date | null;
 
-  // ✅ Email Verification
-  @Column({ default: false })
-  emailVerified: boolean;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  emailVerifiedAt?: Date | null;
-
   // ✅ Paystack Integration
   @Column({ nullable: true })
   paystackCustomerCode?: string;

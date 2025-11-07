@@ -10,6 +10,7 @@ const microservices_1 = require("@nestjs/microservices");
 const common_1 = require("@nestjs/common");
 const helmet_1 = __importDefault(require("helmet"));
 const swagger_1 = require("@nestjs/swagger");
+const auth_main_1 = require("./auth.main");
 async function bootstrap() {
     const logger = new common_1.Logger('Crypt2P');
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
@@ -17,6 +18,7 @@ async function bootstrap() {
     app.use((0, helmet_1.default)());
     app.enableCors();
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalFilters(new auth_main_1.AllRpcExceptionFilter());
     // ✅ Swagger API Docs
     const config = new swagger_1.DocumentBuilder()
         .setTitle('Crypt2P Trading Engine')

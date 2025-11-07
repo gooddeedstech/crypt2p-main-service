@@ -5,6 +5,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AllRpcExceptionFilter } from './auth.main';
 
 async function bootstrap() {
   const logger = new Logger('Crypt2P');
@@ -14,6 +15,7 @@ async function bootstrap() {
   app.use(helmet());
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalFilters(new AllRpcExceptionFilter());
 
   // ✅ Swagger API Docs
   const config = new DocumentBuilder()
