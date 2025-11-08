@@ -32,7 +32,7 @@ async listBuyPairs() {
     this.logger.log(`📡 GET: ${url}`);
 
     const res = await firstValueFrom(
-      this.http.get(url, { headers: this.authHeaders() }),
+      this.http.get(url),
     );
 
     const raw = res.data?.data ?? res.data; // ✅ handles both shapes
