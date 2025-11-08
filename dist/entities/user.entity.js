@@ -15,6 +15,7 @@ const wallet_entity_1 = require("./wallet.entity");
 const deposit_entity_1 = require("./deposit.entity");
 const payout_entity_1 = require("./payout.entity");
 const ledger_entity_1 = require("./ledger.entity");
+const crypto_1 = require("crypto");
 var Gender;
 (function (Gender) {
     Gender["MALE"] = "male";
@@ -35,6 +36,11 @@ var BvnStatus;
 let User = class User {
     get fullName() {
         return `${this.firstName} ${this.lastName}`;
+    }
+    generateReferralCode() {
+        const random = (0, crypto_1.randomBytes)(3).toString('hex').toUpperCase();
+        const prefix = 'C2P-';
+        this.referralCode = `${prefix}${random.substring(0, 6)}`;
     }
 };
 exports.User = User;
@@ -125,6 +131,17 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "bankCode", void 0);
 __decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ unique: true, nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "referralCode", void 0);
+__decorate([
+    (0, typeorm_1.BeforeInsert)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], User.prototype, "generateReferralCode", null);
+__decorate([
     (0, typeorm_1.Column)({ type: 'enum', enum: KycLevel, default: KycLevel.UNVERIFIED }),
     __metadata("design:type", Number)
 ], User.prototype, "kycLevel", void 0);
@@ -145,7 +162,7 @@ __decorate([
     __metadata("design:type", Array)
 ], User.prototype, "wallets", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => deposit_entity_1.Deposit, (d) => d.user),
+    (0, typeorm_1.OneToMany)(() => deposit_entity_1.Deposit, (d) => d.userId),
     __metadata("design:type", Array)
 ], User.prototype, "deposits", void 0);
 __decorate([

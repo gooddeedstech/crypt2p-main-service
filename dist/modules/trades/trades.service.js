@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TradesService = void 0;
 const common_1 = require("@nestjs/common");
@@ -27,6 +28,6 @@ let TradesService = class TradesService {
 exports.TradesService = TradesService;
 exports.TradesService = TradesService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [busha_client_1.BushaClient])
+    __metadata("design:paramtypes", [typeof (_a = typeof busha_client_1.BushaClient !== "undefined" && busha_client_1.BushaClient) === "function" ? _a : Object])
 ], TradesService);
 //# sourceMappingURL=trades.service.js.map

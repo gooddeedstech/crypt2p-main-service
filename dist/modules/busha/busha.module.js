@@ -15,7 +15,7 @@ const deposit_entity_1 = require("../../entities/deposit.entity");
 const webhook_event_entity_1 = require("../../entities/webhook-event.entity");
 const busha_service_1 = require("./busha.service");
 const busha_controller_1 = require("./busha.controller");
-const webhook_controller_1 = require("./webhook.controller");
+// import { BushaWebhookController } from './webhook.controller'
 const trades_module_1 = require("../trades/trades.module");
 const payout_module_1 = require("../payout/payout.module");
 const notify_module_1 = require("../notify/notify.module");
@@ -26,7 +26,7 @@ exports.BushaModule = BushaModule;
 exports.BushaModule = BushaModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([wallet_entity_1.Wallet, user_entity_1.User, deposit_entity_1.Deposit, webhook_event_entity_1.WebhookEvent, ledger_entity_1.LedgerEntry]), trades_module_1.TradesModule, payout_module_1.PayoutModule, notify_module_1.NotifyModule],
-        controllers: [busha_controller_1.BushaController, webhook_controller_1.BushaWebhookController],
+        controllers: [busha_controller_1.BushaController,],
         providers: [busha_service_1.BushaService],
         exports: [busha_service_1.BushaService]
     })

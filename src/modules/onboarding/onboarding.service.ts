@@ -15,6 +15,7 @@ import { EmailVerification } from '@/entities/email-verification.entity';
 import { EmailService } from '../notification/email.service';
 import { PaystackService } from '../paystack/paystack.service';
 import {
+  ChangePasswordDto,
   ConfirmResetDto,
   LoginDto,
   LoginPinDto,
@@ -22,6 +23,7 @@ import {
   StartResetDto,
 } from './dto/dtos';
 import { OtpUtil } from '@/common/otp.util';
+import { ChangePinDto, UpdateProfileDto } from './dto/user-update.dto';
 
 @Injectable()
 export class OnboardingService {
@@ -168,7 +170,7 @@ export class OnboardingService {
 
       return {
         ...this.issueTokens(user),
-        pinEnabled: user.pinEnabled,
+        user,
       };
     } catch (error) {
       if (error instanceof RpcException) throw error;
@@ -270,7 +272,8 @@ export class OnboardingService {
       user.lastLoginAt = new Date();
       await this.users.save(user);
 
-      return user;
+      return { ...this.issueTokens(user),
+        user };
     } catch (error) {
       if (error instanceof RpcException) throw error;
       this.logger.error('loginPin error', error);
@@ -382,6 +385,7 @@ export class OnboardingService {
       }
 
       const code = OtpUtil.generateOtp();
+      console.log(code)
       await this.verifications.save({
         email,
         codeHash: await this.hash(code),
@@ -452,4 +456,68 @@ export class OnboardingService {
       });
     }
   }
+
+   async changePassword(userId: string, dto: ChangePasswordDto) {
+    try {
+      const user = await this.users.findOne({ where: { id: userId } });
+      if (!user)
+        throw new RpcException({ statusCode: 404, message: 'User not found' });
+
+      const valid = await this.compare(dto.currentPassword, user.passwordHash);
+      if (!valid)
+        throw new RpcException({ statusCode: 400, message: 'Current password is incorrect' });
+
+      user.passwordHash = await this.hash(dto.newPassword);
+      await this.users.save(user);
+
+      return { message: 'Password changed successfully' };
+    } catch (err) {
+      if (err instanceof RpcException) throw err;
+      throw new RpcException({ statusCode: 500, message: 'Error changing password' });
+    }
+  }
+
+  /** 🔢 Change PIN — RPC safe */
+  async changePin(userId: string, dto: ChangePinDto) {
+    try {
+      const user = await this.users.findOne({ where: { id: userId } });
+      if (!user)
+        throw new RpcException({ statusCode: 404, message: 'User not found' });
+      if (!user.pinEnabled)
+        throw new RpcException({ statusCode: 400, message: 'PIN not set' });
+
+      const valid = await this.compare(dto.oldPin, user.pinHash);
+      if (!valid)
+        throw new RpcException({ statusCode: 400, message: 'Old PIN is incorrect' });
+
+      user.pinHash = await this.hash(dto.newPin);
+      user.failedPinAttempts = 0;
+      await this.users.save(user);
+
+      return { message: 'PIN changed successfully' };
+    } catch (err) {
+      if (err instanceof RpcException) throw err;
+      throw new RpcException({ statusCode: 500, message: 'Error changing PIN' });
+    }
+  }
+
+  /** 🧍 Update profile — RPC safe */
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    try {
+      const user = await this.users.findOne({ where: { id: userId } });
+      if (!user)
+        throw new RpcException({ statusCode: 404, message: 'User not found' });
+
+      Object.assign(user, dto);
+      if (dto.dob) user.dob = new Date(dto.dob);
+
+      await this.users.save(user);
+      return { message: 'Profile updated successfully', user };
+    } catch (err) {
+      if (err instanceof RpcException) throw err;
+      throw new RpcException({ statusCode: 500, message: 'Error updating profile' });
+    }
+  }
+
+  
 }

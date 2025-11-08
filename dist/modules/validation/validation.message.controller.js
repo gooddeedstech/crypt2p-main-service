@@ -49,8 +49,8 @@ let ValidationMessageController = ValidationMessageController_1 = class Validati
         }
     }
     async verifyBVN(dto) {
-        this.logger.log(`➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.accountNumber}, Bank: ${dto.bankCode}`);
-        if (!dto.bvn || !dto.accountNumber || !dto.bankCode) {
+        this.logger.log(`➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.account_number}, Bank: ${dto.bank_code}`);
+        if (!dto.bvn || !dto.account_number || !dto.bank_code || !dto.first_name || !dto.last_name) {
             throw new common_1.BadRequestException('bvn, accountNumber, bankCode, firstName & lastName are required');
         }
         try {

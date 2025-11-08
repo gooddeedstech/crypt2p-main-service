@@ -1,25 +1,40 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm'
-import { User } from './user.entity'
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('deposits')
 export class Deposit {
-  @PrimaryGeneratedColumn('uuid') id: string
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column() userId: string
-  @ManyToOne(() => User, u => u.deposits, { onDelete: 'CASCADE' }) user: User
+  @Column()
+  userId: string;
 
-  @Column() asset: string
-  @Column() network: string
+  @Column()
+  asset: string;
 
-  @Column({ unique: true }) @Index() txHash: string
+  @Column()
+  network: string;
 
-  @Column('decimal', { precision: 38, scale: 18 }) amountAsset: string
-  @Column('decimal', { precision: 38, scale: 2, nullable: true }) amountNgn: string | null
+  @Column()
+  address: string;
 
-  @Column({ default: 0 }) confirmations: number
-  @Column({ default: 'PENDING' }) status: string
-  @Column({ nullable: true }) bushaRef?: string
+  @Column({ nullable: true })
+  transferId?: string;
 
-  @CreateDateColumn() createdAt: Date
-  @UpdateDateColumn() updatedAt: Date
+  @Column({ nullable: true })
+  txHash?: string;
+
+  @Column({ type: 'decimal', precision: 18, scale: 8 })
+  amount: number;
+
+  @Column({ default: 'pending' })
+  status: string;
+
+  @Column({ nullable: true })
+  confirmedAt?: Date;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

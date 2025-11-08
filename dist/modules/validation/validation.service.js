@@ -96,7 +96,7 @@ let ValidationService = ValidationService_1 = class ValidationService {
         }
     }
     async verifyBVNWithAccount(dto) {
-        const { email, bvn, accountNumber, bankCode } = dto;
+        const { email, first_name, last_name, bvn, account_number, bank_code } = dto;
         const user = await this.usersRepo.findOne({ where: { email } });
         if (!user)
             throw new common_1.NotFoundException('Invalid email');
@@ -106,9 +106,11 @@ let ValidationService = ValidationService_1 = class ValidationService {
         const payload = {
             country: 'NG',
             type: 'bank_account',
-            account_number: accountNumber,
-            bank_code: bankCode,
+            account_number: account_number,
             bvn,
+            bank_code: bank_code,
+            first_name,
+            last_name
         };
         const url = `https://api.paystack.co/customer/${user.paystackCustomerCode}/identification`;
         await axios_1.default.post(url, payload, {
@@ -125,18 +127,26 @@ let ValidationService = ValidationService_1 = class ValidationService {
     }
     async processPaystackWebhook(event) {
         const { event: type, data } = event;
-        const customerCode = data.customer?.customer_code;
-        if (!customerCode)
-            return;
+        this.logger.log(`📩 Paystack Webhook Received: ${type}`);
+        // ✅ Extract the right customer_code field (based on actual schema)
+        const customerCode = data?.customer_code;
+        if (!customerCode) {
+            this.logger.warn('⚠️ Missing customer_code in webhook');
+            return { success: false, status: 'missing_customer_code' };
+        }
         const user = await this.usersRepo.findOne({
             where: { paystackCustomerCode: customerCode },
         });
-        if (!user)
-            return;
-        // ✅ Common data extraction
-        const actualName = data?.account_name?.trim() ?? '';
+        if (!user) {
+            this.logger.warn(`⚠️ No user found for customer_code=${customerCode}`);
+            return { success: false, status: 'user_not_found' };
+        }
+        const identification = data?.identification ?? {};
+        const bvn = identification?.bvn;
+        const bankCode = identification?.bank_code;
+        const accountNumber = identification?.account_number;
+        // Fallback safe values
         const expectedName = `${user.firstName} ${user.lastName}`.trim();
-        const fraudCheck = this.fraud.evaluateNameMatch(expectedName, actualName);
         // =====================================================
         // ✅ SUCCESS EVENT
         // =====================================================
@@ -144,16 +154,17 @@ let ValidationService = ValidationService_1 = class ValidationService {
             user.bvnStatus = user_entity_1.BvnStatus.VERIFIED;
             user.kycLevel = user_entity_1.KycLevel.BASIC;
             user.bvnLastCheckedAt = new Date();
-            user.bankCode = data?.identification?.bank_code;
-            user.bankAccountNo = data?.identification?.account_number;
+            user.bankCode = bankCode;
+            user.bankAccountNo = accountNumber;
             await this.usersRepo.save(user);
             await this.audit.write({
                 actorId: user.id,
                 actorType: audit_log_entity_1.ActorType.USER,
                 action: 'BVN_VERIFY_SUCCESS',
-                targetId: data?.bvn,
-                responseData: { expectedName, actualName, fraudCheck },
+                targetId: bvn,
+                responseData: { data },
             });
+            this.logger.log(`✅ BVN verification SUCCESS for ${user.email}`);
             return { success: true, status: 'bvn_verified' };
         }
         // =====================================================
@@ -161,16 +172,18 @@ let ValidationService = ValidationService_1 = class ValidationService {
         // =====================================================
         if (type === 'customeridentification.failed') {
             user.bvnStatus = user_entity_1.BvnStatus.FAILED;
-            user.bvnFailureReason = data?.reason || 'Incorrect name/BVN mismatch';
+            user.bvnFailureReason =
+                data?.reason || 'Account number or BVN is incorrect';
             user.bvnLastCheckedAt = new Date();
             await this.usersRepo.save(user);
             await this.audit.write({
                 actorId: user.id,
                 actorType: audit_log_entity_1.ActorType.USER,
                 action: 'BVN_VERIFY_FAILED',
-                targetId: data?.bvn,
+                targetId: bvn,
                 responseData: data,
             });
+            this.logger.warn(`❌ BVN verification FAILED for ${user.email}`);
             return { success: true, status: 'bvn_failed' };
         }
         // =====================================================
@@ -185,11 +198,16 @@ let ValidationService = ValidationService_1 = class ValidationService {
                 actorId: user.id,
                 actorType: audit_log_entity_1.ActorType.USER,
                 action: 'BVN_VERIFY_ABANDONED',
-                targetId: data?.bvn,
+                targetId: bvn,
                 responseData: data,
             });
+            this.logger.warn(`⏳ BVN verification ABANDONED for ${user.email}`);
             return { success: true, status: 'bvn_pending' };
         }
+        // =====================================================
+        // 🟡 UNKNOWN / IGNORED EVENT
+        // =====================================================
+        this.logger.warn(`⚠️ Unhandled Paystack event type: ${type}`);
         return { success: true, status: 'ignored_event' };
     }
 };

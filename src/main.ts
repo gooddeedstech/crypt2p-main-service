@@ -6,6 +6,8 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AllRpcExceptionFilter } from './auth.main';
+import * as express from 'express';
+
 
 async function bootstrap() {
   const logger = new Logger('Crypt2P');
@@ -14,6 +16,13 @@ async function bootstrap() {
   // ✅ Security + CORS
   app.use(helmet());
   app.enableCors();
+  app.use(
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString(); // capture original body
+    },
+  }),
+);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new AllRpcExceptionFilter());
 

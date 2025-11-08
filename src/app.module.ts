@@ -3,46 +3,35 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { JwtModule } from '@nestjs/jwt';
+
+import { envSchema } from './env.validation'; // ✅ NEW
 import { z } from 'zod';
 
-// ✅ Core Entities
+// ✅ Entities & Modules (same as before)
 import { User } from './entities/user.entity';
 import { Wallet } from './entities/wallet.entity';
 import { Deposit } from './entities/deposit.entity';
 import { Payout } from './entities/payout.entity';
 import { LedgerEntry } from './entities/ledger.entity';
 import { WebhookEvent } from './entities/webhook-event.entity';
-
-// ✅ Onboarding Entities
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordReset } from './entities/password-reset.entity';
-
-// ✅ Validation & Security Logs
-import { ValidationLog } from './entities/validation-log.entity';
-import { AuditLog } from './entities/audit-log.entity';
-
-// ✅ Feature Modules
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
-import { WalletsModule } from './modules/wallets/wallets.module';
-import { BushaModule } from './modules/busha/busha.module';
-import { TradesModule } from './modules/trades/trades.module';
 import { PayoutModule } from './modules/payout/payout.module';
 import { NotifyModule } from './modules/notify/notify.module';
 import { ValidationModule } from './modules/validation/validation.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { BushaAPIModule } from './modules/busha-service/busha-api.module';
-
-// ✅ Environment validation using Zod
-const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  NODE_ENV: z.enum(['development', 'production']).default('development'),
-  JWT_SECRET: z.string().min(10, 'JWT_SECRET is required'),
-});
+import { OnboardingService } from './modules/onboarding/onboarding.service';
+import { EmailVerification } from './entities/email-verification.entity';
+import { EmailService } from './modules/notification/email.service';
+import { PaystackService } from './modules/paystack/paystack.service';
 
 @Module({
   imports: [
-    // ✅ Validates .env before app boots
+    // ✅ Load Config before everything
     ConfigModule.forRoot({
       isGlobal: true,
       validate: (env) => {
@@ -55,46 +44,54 @@ const envSchema = z.object({
       },
     }),
 
-    // ✅ DB Connection (Prod Safe)
+    // ✅ Database setup
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        type: 'postgres',
+        url: config.get('DATABASE_URL'),
+        ssl: config.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+        namingStrategy: new SnakeNamingStrategy(),
+        autoLoadEntities: true,
+        synchronize: config.get('NODE_ENV') !== 'production',
+        migrationsRun: config.get('NODE_ENV') === 'production',
+        migrations: ['dist/migrations/*.js'],
+      }),
+    }),
+
+    // ✅ JWT Config
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const isProd = config.get('NODE_ENV') === 'production';
+        const secret = config.get<string>('JWT_SECRET');
+        const expiresIn = config.get<string>('JWT_EXPIRES_IN') || '1d';
+
+        console.log('✅ Loaded JWT_SECRET:', secret);
 
         return {
-          type: 'postgres',
-          url: config.get<string>('DATABASE_URL'),
-          ssl: isProd ? { rejectUnauthorized: false } : false,
-          namingStrategy: new SnakeNamingStrategy(),
-          autoLoadEntities: true,
-          synchronize: !isProd,
-          migrationsRun: isProd,
-          migrations: ['dist/migrations/*.js'],
-          logging: !isProd ? ['query', 'error'] : ['error'],
-          retryAttempts: 10,
-          retryDelay: 2000,
+          secret,
+          signOptions: { expiresIn, algorithm: 'HS256' },
         };
       },
     }),
 
-    // ✅ Security: Rate limiting auth endpoints
+    // ✅ Rate limiting
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
 
-    // ✅ Entities needed for onboarding logic
-    TypeOrmModule.forFeature([RefreshToken, PasswordReset]),
-
-    // ✅ Core Modules
+    // ✅ Entities + feature modules
+    TypeOrmModule.forFeature([User, RefreshToken, PasswordReset, EmailVerification]),
     AuthModule,
     UsersModule,
-    WalletsModule,
-    BushaModule,
-    TradesModule,
     PayoutModule,
     NotifyModule,
     ValidationModule,
-    OnboardingModule, 
+    OnboardingModule,
     BushaAPIModule,
   ],
+
+  providers: [OnboardingService, EmailService, PaystackService],
+  exports: [JwtModule],
 })
 export class AppModule {}

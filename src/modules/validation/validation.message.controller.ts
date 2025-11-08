@@ -51,10 +51,10 @@ export class ValidationMessageController {
 @MessagePattern({ cmd: 'bvn.verify' })
 async verifyBVN(@Payload() dto: VerifyBvnDto) {
   this.logger.log(
-    `➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.accountNumber}, Bank: ${dto.bankCode}`,
+    `➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.account_number}, Bank: ${dto.bank_code}`,
   );
 
-  if (!dto.bvn || !dto.accountNumber || !dto.bankCode ) {
+  if (!dto.bvn || !dto.account_number || !dto.bank_code || !dto.first_name || !dto.last_name) {
     throw new BadRequestException(
       'bvn, accountNumber, bankCode, firstName & lastName are required'
     );

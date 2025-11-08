@@ -7,11 +7,13 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  BeforeInsert,
 } from 'typeorm';
 import { Wallet } from './wallet.entity';
 import { Deposit } from './deposit.entity';
 import { Payout } from './payout.entity';
 import { LedgerEntry } from './ledger.entity';
+import { randomBytes } from 'crypto';
 
 export enum Gender {
   MALE = 'male',
@@ -106,6 +108,18 @@ export class User {
   @Column({ nullable: true })
   bankCode?: string;
 
+  // ✅ Referral System
+  @Index()
+  @Column({ unique: true, nullable: true })
+  referralCode: string;
+
+  @BeforeInsert()
+  generateReferralCode() {
+    const random = randomBytes(3).toString('hex').toUpperCase();
+    const prefix = 'C2P-';
+    this.referralCode = `${prefix}${random.substring(0, 6)}`;
+  }
+
   // ✅ KYC & BVN Verification
   @Column({ type: 'enum', enum: KycLevel, default: KycLevel.UNVERIFIED })
   kycLevel: KycLevel;
@@ -123,7 +137,7 @@ export class User {
   @OneToMany(() => Wallet, (w) => w.user)
   wallets: Wallet[];
 
-  @OneToMany(() => Deposit, (d) => d.user)
+  @OneToMany(() => Deposit, (d) => d.userId)
   deposits: Deposit[];
 
   @OneToMany(() => Payout, (p) => p.user)

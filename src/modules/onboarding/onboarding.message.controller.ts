@@ -7,7 +7,9 @@ import {
   LoginPinDto,
   ConfirmResetDto,
   StartResetDto,
+  ChangePasswordDto,
 } from './dto/dtos';
+import { ChangePinDto, UpdateProfileDto } from './dto/user-update.dto';
 
 @Controller()
 export class OnboardingMessageController {
@@ -51,5 +53,26 @@ export class OnboardingMessageController {
   @MessagePattern({ cmd: 'onboarding.reset.confirm' })
   confirmReset(@Payload() dto: ConfirmResetDto) {
     return this.svc.confirmReset(dto);
+  }
+
+  @MessagePattern({ cmd: 'users.change.password' })
+  async handleChangePassword(
+    @Payload() payload: { userId: string; dto: ChangePasswordDto },
+  ) {
+    return this.svc.changePassword(payload.userId, payload.dto);
+  }
+
+  @MessagePattern({ cmd: 'users.change.pin' })
+  async handleChangePin(
+    @Payload() payload: { userId: string; dto: ChangePinDto },
+  ) {
+    return this.svc.changePin(payload.userId, payload.dto);
+  }
+
+  @MessagePattern({ cmd: 'users.update.profile' })
+  async handleUpdateProfile(
+    @Payload() payload: { userId: string; dto: UpdateProfileDto },
+  ) {
+    return this.svc.updateProfile(payload.userId, payload.dto);
   }
 }

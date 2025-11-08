@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Deposit = void 0;
 const typeorm_1 = require("typeorm");
-const user_entity_1 = require("./user.entity");
 let Deposit = class Deposit {
 };
 exports.Deposit = Deposit;
@@ -24,10 +23,6 @@ __decorate([
     __metadata("design:type", String)
 ], Deposit.prototype, "userId", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, u => u.deposits, { onDelete: 'CASCADE' }),
-    __metadata("design:type", user_entity_1.User)
-], Deposit.prototype, "user", void 0);
-__decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], Deposit.prototype, "asset", void 0);
@@ -36,30 +31,29 @@ __decorate([
     __metadata("design:type", String)
 ], Deposit.prototype, "network", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
-    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], Deposit.prototype, "address", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Deposit.prototype, "transferId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], Deposit.prototype, "txHash", void 0);
 __decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 38, scale: 18 }),
-    __metadata("design:type", String)
-], Deposit.prototype, "amountAsset", void 0);
-__decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 38, scale: 2, nullable: true }),
-    __metadata("design:type", String)
-], Deposit.prototype, "amountNgn", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 18, scale: 8 }),
     __metadata("design:type", Number)
-], Deposit.prototype, "confirmations", void 0);
+], Deposit.prototype, "amount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'PENDING' }),
+    (0, typeorm_1.Column)({ default: 'pending' }),
     __metadata("design:type", String)
 ], Deposit.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Deposit.prototype, "bushaRef", void 0);
+    __metadata("design:type", Date)
+], Deposit.prototype, "confirmedAt", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
