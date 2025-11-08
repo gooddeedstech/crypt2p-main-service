@@ -35,8 +35,6 @@ async listBuyPairs() {
       this.http.get(url),
     );
 
-    console.log(res.data)
-
     const raw = res.data?.data ?? res.data; // ✅ handles both shapes
   
     const usdtPair = Array.isArray(raw)
