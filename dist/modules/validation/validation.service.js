@@ -155,7 +155,7 @@ let ValidationService = ValidationService_1 = class ValidationService {
             user.kycLevel = user_entity_1.KycLevel.BASIC;
             user.bvnLastCheckedAt = new Date();
             user.bankCode = bankCode;
-            user.bankAccountNo = accountNumber;
+            //user.bankAccountNo = accountNumber;
             await this.usersRepo.save(user);
             await this.audit.write({
                 actorId: user.id,

@@ -29,6 +29,7 @@ const onboarding_service_1 = require("./modules/onboarding/onboarding.service");
 const email_verification_entity_1 = require("./entities/email-verification.entity");
 const email_service_1 = require("./modules/notification/email.service");
 const paystack_service_1 = require("./modules/paystack/paystack.service");
+const rubies_module_1 = require("./modules/rubies/rubies.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -87,6 +88,7 @@ exports.AppModule = AppModule = __decorate([
             validation_module_1.ValidationModule,
             onboarding_module_1.OnboardingModule,
             busha_api_module_1.BushaAPIModule,
+            rubies_module_1.RubiesModule,
         ],
         providers: [onboarding_service_1.OnboardingService, email_service_1.EmailService, paystack_service_1.PaystackService],
         exports: [jwt_1.JwtModule],

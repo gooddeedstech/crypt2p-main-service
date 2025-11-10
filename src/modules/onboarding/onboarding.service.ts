@@ -519,5 +519,12 @@ export class OnboardingService {
     }
   }
 
+
+  async findById(userId: string) {
+  const user = await this.users.findOne({ where: { id: userId } });
+  if (!user) throw new RpcException({ message: 'User not found', statusCode: 404 });
+  return user;
+}
+
   
 }

@@ -75,4 +75,9 @@ export class OnboardingMessageController {
   ) {
     return this.svc.updateProfile(payload.userId, payload.dto);
   }
+
+    @MessagePattern({ cmd: 'users.find.byId' })
+  async handleFindUser(@Payload() payload: { userId: string }) {
+    return this.svc.findById(payload.userId);
+  }
 }

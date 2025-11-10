@@ -103,37 +103,38 @@ export class BushaWalletService {
   try {
     // ✅ Step 1: Create quote + transfer
     const quote = await this.createQuote(asset, amount, network);
-    const transfer = await this.createDepositWallet(quote.id);
+    return quote
+    //const transfer = await this.createDepositWallet(quote.id);
 
-    // ✅ Step 2: Save deposit record
-    const deposit = this.deposits.create({
-      user_id: userId,
-      asset,
-      network,
-      amount: Number(amount),
-      quote_id: quote.id,
-      transfer_id: transfer.transferId,
-      address: transfer.address,
-      expires_at: transfer.expiresAt,
-      status: DepositStatus.PENDING,
-      type: DepositType.CRYPTO_TO_CASH,
-      metadata: { busha: { quote, transfer } },
-    });
+    // // ✅ Step 2: Save deposit record
+    // const deposit = this.deposits.create({
+    //   user_id: userId,
+    //   asset,
+    //   network,
+    //   amount: Number(amount),
+    //   quote_id: quote.id,
+    //   transfer_id: transfer.transferId,
+    //   address: transfer.address,
+    //   expires_at: transfer.expiresAt,
+    //   status: DepositStatus.PENDING,
+    //   type: DepositType.CRYPTO_TO_CASH,
+    //   metadata: { busha: { quote, transfer } },
+    // });
 
-    await this.deposits.save(deposit);
+    // await this.deposits.save(deposit);
 
-    this.logger.log(`💾 Deposit record created for ${asset} → ${deposit.id}`);
+    // this.logger.log(`💾 Deposit record created for ${asset} → ${deposit.id}`);
 
-    // ✅ Step 3: Return data to client
-    return {
-      id: deposit.id,
-      asset,
-      network,
-      amount,
-      address: deposit.address,
-      expiresAt: deposit.expires_at,
-      status: deposit.status,
-    };
+    // // ✅ Step 3: Return data to client
+    // return {
+    //   id: deposit.id,
+    //   asset,
+    //   network,
+    //   amount,
+    //   address: deposit.address,
+    //   expiresAt: deposit.expires_at,
+    //   status: deposit.status,
+    // };
   } catch (error) {
     this.logger.error(`❌ Failed to generate deposit wallet`, error);
     throw error;

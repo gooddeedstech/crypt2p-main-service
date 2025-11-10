@@ -165,7 +165,7 @@ async processPaystackWebhook(event: any) {
     user.kycLevel = KycLevel.BASIC;
     user.bvnLastCheckedAt = new Date();
     user.bankCode = bankCode;
-    user.bankAccountNo = accountNumber;
+    //user.bankAccountNo = accountNumber;
 
     await this.usersRepo.save(user);
 

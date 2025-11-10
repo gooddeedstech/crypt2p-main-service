@@ -28,6 +28,7 @@ import { OnboardingService } from './modules/onboarding/onboarding.service';
 import { EmailVerification } from './entities/email-verification.entity';
 import { EmailService } from './modules/notification/email.service';
 import { PaystackService } from './modules/paystack/paystack.service';
+import { RubiesModule } from './modules/rubies/rubies.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { PaystackService } from './modules/paystack/paystack.service';
     ValidationModule,
     OnboardingModule,
     BushaAPIModule,
+    RubiesModule,
   ],
 
   providers: [OnboardingService, EmailService, PaystackService],
