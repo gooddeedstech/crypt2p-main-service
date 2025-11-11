@@ -53,9 +53,34 @@ export class BushaBuyService {
           message: `Unable to retrieve exchange rate for ${asset}`,
         });
       }
-
+      const fee = 500;
       const rate = Number(pair[0].buyPrice);
-      const convertedAmount = Number((amount / rate).toFixed(8));
+      const convertedAmount = Number((amount / rate).toFixed(2)) + fee;
+
+    const payload = {
+    source_currency: "NGN",
+    target_currency: "NGN",
+    source_amount: convertedAmount,
+    pay_in: {
+      type: "temporary_bank_account"
+    }
+  }
+    const url = `${this.baseUrl}/v1/quotes`;
+
+    const res = await firstValueFrom(
+    this.http.post(url, payload, { headers: this.authHeaders() }),
+  );
+  const quoteId = res.data.data.id
+
+    const url2 = `${this.baseUrl}/v1/transfers`;
+ const payload2 = { quote_id: quoteId };
+     const res2 = await firstValueFrom(
+    this.http.post(url2, payload2, { headers: this.authHeaders() }),
+  );
+  const data = res2.data?.data;
+
+ return data.pay_in
+     
 
       // ✅ Create pending transaction
       const tx = this.txRepo.create({

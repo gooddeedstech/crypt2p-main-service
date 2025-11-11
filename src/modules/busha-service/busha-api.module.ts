@@ -28,8 +28,8 @@ import { BushaBuyService } from './buy-service/busha-buy.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Wallet, User, PasswordReset, EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig]), HttpModule],
   
-  providers: [BushaAPIService, JwtService, EmailService, PaystackService, BushaBuyService , BushaWalletService, BushaDepositService,BushaBuyMessageController, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
-  controllers: [BushaAPIMessageController, BushaWebhookMessageController],
+  providers: [BushaAPIService, JwtService, EmailService, PaystackService, BushaBuyService , BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  controllers: [BushaAPIMessageController, BushaWebhookMessageController, BushaBuyMessageController],
   exports: [BushaAPIService],
 })
 export class BushaAPIModule {}
