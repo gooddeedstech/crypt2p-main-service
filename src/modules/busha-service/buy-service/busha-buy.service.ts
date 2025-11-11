@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { CryptoTransaction, CryptoTransactionStatus, CryptoTransactionType } from '@/entities/crypto-transaction.entity';
 import { RpcException } from '@nestjs/microservices';
 import { BushaAPIService } from '../busha-api.service';
+import { FeesService } from '@/modules/fees/fees.service';
 
 @Injectable()
 export class BushaBuyService {
@@ -18,6 +19,7 @@ export class BushaBuyService {
     @InjectRepository(CryptoTransaction)
     private readonly txRepo: Repository<CryptoTransaction>,
      private readonly bushaAPIService: BushaAPIService,
+     private readonly feesService: FeesService
     
   ) {}
 
@@ -53,10 +55,10 @@ export class BushaBuyService {
           message: `Unable to retrieve exchange rate for ${asset}`,
         });
       }
-      const fee = 500;
+      const feeData = await this.feesService.findByAsset(asset);
       const rate = Number(pair[0].buyPrice);
       const convertedAmount = Number((amount / rate).toFixed(2));
-      const amountPlusFees = amount + fee
+      const amountPlusFees = amount + feeData.fee
 
     const payload = {
     source_currency: "NGN",

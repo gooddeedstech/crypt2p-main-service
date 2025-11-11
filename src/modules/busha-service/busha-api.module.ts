@@ -23,13 +23,16 @@ import { EmailService } from '../notification/email.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { BushaBuyMessageController } from './buy-service/busha-buy.message.controller';
 import { BushaBuyService } from './buy-service/busha-buy.service';
+import { FeesService } from '../fees/fees.service';
+import { FeesMessageController } from '../fees/fees.message.controller';
+import { Fee } from '@/entities/fees.entity';
 
  
 @Module({
-  imports: [TypeOrmModule.forFeature([Wallet, User, PasswordReset, EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig]), HttpModule],
+  imports: [TypeOrmModule.forFeature([Wallet, User, Fee, PasswordReset, EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig]), HttpModule],
   
-  providers: [BushaAPIService, JwtService, EmailService, PaystackService, BushaBuyService , BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
-  controllers: [BushaAPIMessageController, BushaWebhookMessageController, BushaBuyMessageController],
+  providers: [BushaAPIService, JwtService, EmailService, PaystackService, FeesService, BushaBuyService , BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  controllers: [BushaAPIMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
   exports: [BushaAPIService],
 })
 export class BushaAPIModule {}
