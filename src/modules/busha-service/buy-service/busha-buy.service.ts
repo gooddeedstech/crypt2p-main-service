@@ -58,7 +58,7 @@ export class BushaBuyService {
       const feeData = await this.feesService.findByAsset(asset);
       const rate = Number(pair[0].buyPrice);
       const convertedAmount = Number((amount / rate).toFixed(2));
-      const amountPlusFees = amount + feeData.fee
+      const amountPlusFees = amount + (feeData.fee * rate)
 
     const payload = {
     source_currency: "NGN",
