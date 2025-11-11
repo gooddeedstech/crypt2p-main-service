@@ -97,6 +97,7 @@ export class BushaBuyService {
         address: walletAddress,
         status: CryptoTransactionStatus.PENDING,
         type: CryptoTransactionType.CASH_TO_CRYPTO,
+        expires_at: buyData.pay_in.expires_at,
       });
 
       await this.txRepo.save(tx);
