@@ -18,6 +18,7 @@ const BANK_CODE_OVERRIDES: Record<string, string> = {
   '999992': '100004', // OPay → PAYCOM
   '000008': '999991', // Polaris Bank → POLARISBANK
   '000023': '999994', // Providus → TESTBANK (if sandbox)
+  '058': '000013',
 };
 
 @Injectable()
@@ -170,7 +171,7 @@ private findRubiesMatch(paystackName: string): RubiesBank | undefined {
         const rubiesCode = BANK_CODE_OVERRIDES[paystackCode];
         const rubiesName =
           this.rubiesBanks.find((b) => b.bankCode === rubiesCode)?.bankName ||
-          'OVERRIDE_MATCH';
+          '';
         this.bankMapCache.set(paystackCode, { rubiesCode, rubiesName });
 
         this.logger.log(`🔁 Override match: Paystack(${paystackCode}) → Rubies(${rubiesCode})`);

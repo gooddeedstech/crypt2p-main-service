@@ -47,7 +47,7 @@ async updateStatusFromBushaWebhook(payload: any) {
 
     }
 
-  // const rubiesBankDetails =  await this.rubiesBankMapperService.getRubiesBankCode(user.bankCode)
+   const rubiesBankDetails =  await this.rubiesBankMapperService.getRubiesBankCode(user.bankCode)
 
       if (internalStatus === CryptoTransactionStatus.SUCCESSFUL) {
 
@@ -68,8 +68,8 @@ async updateStatusFromBushaWebhook(payload: any) {
 
        const transferDto: RubiesTransferDto = {
           amount: Number(deposit.convertedAmount),
-          bankCode: user.bankCode,
-          bankName: user.bankName,
+          bankCode: rubiesBankDetails.rubiesCode,
+          bankName: rubiesBankDetails.rubiesName,
           creditAccountName: `${user.firstName} ${user.lastName}` , 
           creditAccountNumber: user.bankAccountNo,
           debitAccountName: 'Gooddeeds Technology Enterprise LTD', 
