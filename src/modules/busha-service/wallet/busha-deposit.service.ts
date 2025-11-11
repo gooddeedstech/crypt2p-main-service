@@ -74,7 +74,7 @@ async updateStatusFromBushaWebhook(payload: any) {
           creditAccountNumber: user.bankAccountNo,
           debitAccountName: 'Gooddeeds Technology Enterprise LTD', 
           debitAccountNumber: '1000001179',         
-          narration: `Payout for ${deposit.user_id}`,
+          narration: `Payout From Gooddeeds Tech LTD}`,
           reference: `REF-${Date.now()}-${deposit.id}`,
           sessionId: Date.now().toString(),
         };
