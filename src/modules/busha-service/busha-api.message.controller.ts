@@ -16,6 +16,8 @@ export class BushaWebhookMessageController {
 
     try {
       const data = payload.data;
+
+      console.log(payload.data)
       await this.depositService.updateStatusFromBushaWebhook(data);
 
       this.logger.log(`✅ Deposit updated for transfer ${data.id}`);
