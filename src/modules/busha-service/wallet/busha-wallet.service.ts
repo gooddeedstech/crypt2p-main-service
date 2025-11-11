@@ -101,7 +101,7 @@ export class BushaWalletService {
    * ✅ Combined Helper
    * Creates both Quote + Transfer and returns a wallet address
    */
- async generateDepositWallet(userId: string, asset: string, amount: string, exchangeRate: string, network: string) {
+ async generateDepositWallet(userId: string, asset: string, amount: string, network: string) {
   try {
     // ✅ Step 1: Create quote + transfer
     const quote = await this.createQuote(asset, amount, network);
@@ -147,7 +147,7 @@ export class BushaWalletService {
       asset,
       network,
       amount,
-      exchangeRate,
+      exchangeRate: numericRate,
       convertedAmount,
       address: deposit.address,
       expiresAt: deposit.expires_at,

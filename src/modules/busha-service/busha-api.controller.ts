@@ -27,7 +27,7 @@ async listPairs(@Payload() payload?: { type?: AssetType }) {
     this.logger.log(`📩 Received wallet generation request: ${JSON.stringify(payload)}`);
 
     const { userId, asset, amount, exchangeRate,  network } = payload;
-    return await this.bushaWalletService.generateDepositWallet(userId, asset, amount, exchangeRate, network);
+    return await this.bushaWalletService.generateDepositWallet(userId, asset, amount, network);
   }
 
 
