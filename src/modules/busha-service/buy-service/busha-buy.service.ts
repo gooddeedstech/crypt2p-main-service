@@ -55,12 +55,13 @@ export class BushaBuyService {
       }
       const fee = 500;
       const rate = Number(pair[0].buyPrice);
-      const convertedAmount = Number((amount / rate).toFixed(2)) + fee;
+      const convertedAmount = Number((amount / rate).toFixed(2));
+      const amountPlusFees = amount + fee
 
     const payload = {
     source_currency: "NGN",
     target_currency: "NGN",
-    source_amount: convertedAmount,
+    source_amount: amountPlusFees,
     pay_in: {
       type: "temporary_bank_account"
     }
@@ -77,18 +78,20 @@ export class BushaBuyService {
      const res2 = await firstValueFrom(
     this.http.post(url2, payload2, { headers: this.authHeaders() }),
   );
-  const data = res2.data?.data;
+  const buyData = res2.data?.data;
 
- return data.pay_in
-     
 
       // ✅ Create pending transaction
       const tx = this.txRepo.create({
         user_id: userId,
         asset,
         network,
-        amount,
+        amount: amountPlusFees,
         convertedAmount,
+        exchangeRate: rate,
+        quote_id: quoteId,
+        transfer_id: buyData.id,
+        metadata: buyData,
         address: walletAddress,
         status: CryptoTransactionStatus.PENDING,
         type: CryptoTransactionType.CASH_TO_CRYPTO,
@@ -99,9 +102,10 @@ export class BushaBuyService {
       this.logger.log(`💰 Buy request created: ${tx.id} for ₦${amount} → ${convertedAmount} ${asset}`);
 
       return {
-        message: 'Buy request created successfully',
-        statusCode: 201,
-        data: tx,
+       
+          ...buyData.pay_in,
+          ...tx
+      
       };
     } catch (error: any) {
       this.logger.error(`❌ createBuyRequest error: ${error.message}`);
