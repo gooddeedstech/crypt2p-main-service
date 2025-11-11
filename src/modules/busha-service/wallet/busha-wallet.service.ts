@@ -3,8 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CryptoDeposit, DepositStatus, DepositType } from '@/entities/crypto-deposit.entity';
+import { CryptoTransaction, CryptoTransactionStatus, CryptoTransactionType } from '@/entities/crypto-transaction.entity';
 import { Repository } from 'typeorm';
+import { BushaAPIService } from '../busha-api.service';
 
 @Injectable()
 export class BushaWalletService {
@@ -14,8 +15,9 @@ export class BushaWalletService {
 
   constructor(
     private readonly http: HttpService,
-    @InjectRepository(CryptoDeposit)
-    private readonly deposits: Repository<CryptoDeposit>,
+    @InjectRepository(CryptoTransaction)
+    private readonly deposits: Repository<CryptoTransaction>,
+    private readonly bushaAPIService: BushaAPIService,
 ) {}
 
   private authHeaders() {
@@ -99,42 +101,58 @@ export class BushaWalletService {
    * ✅ Combined Helper
    * Creates both Quote + Transfer and returns a wallet address
    */
- async generateDepositWallet(userId: string, asset: string, amount: string, network: string) {
+ async generateDepositWallet(userId: string, asset: string, amount: string, exchangeRate: string, network: string) {
   try {
     // ✅ Step 1: Create quote + transfer
     const quote = await this.createQuote(asset, amount, network);
-    return quote
-    //const transfer = await this.createDepositWallet(quote.id);
+    const transfer = await this.createDepositWallet(quote.id);
 
-    // // ✅ Step 2: Save deposit record
-    // const deposit = this.deposits.create({
-    //   user_id: userId,
-    //   asset,
-    //   network,
-    //   amount: Number(amount),
-    //   quote_id: quote.id,
-    //   transfer_id: transfer.transferId,
-    //   address: transfer.address,
-    //   expires_at: transfer.expiresAt,
-    //   status: DepositStatus.PENDING,
-    //   type: DepositType.CRYPTO_TO_CASH,
-    //   metadata: { busha: { quote, transfer } },
-    // });
+    // ✅ Step 2: Save deposit record
 
-    // await this.deposits.save(deposit);
+     const pair = await this.bushaAPIService.listAllActiveAssets(undefined, asset);
+      const rate = pair[0].buyPrice; 
+     const numericAmount = Number(amount);
+    const numericRate = Number(rate);
+    const convertedAmount = numericAmount * numericRate;
+    if (isNaN(numericAmount) || isNaN(numericRate)) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid amount or exchange rate provided',
+      });
+    }
 
-    // this.logger.log(`💾 Deposit record created for ${asset} → ${deposit.id}`);
+    const deposit = this.deposits.create({
+      user_id: userId,
+      asset,
+      network,
+      exchangeRate: numericRate,
+      amount: numericAmount,
+      convertedAmount: convertedAmount,
+      quote_id: quote.id,
+      transfer_id: transfer.transferId,
+      address: transfer.address,
+      expires_at: transfer.expiresAt,
+      status: CryptoTransactionStatus.PENDING,
+      type: CryptoTransactionType.CRYPTO_TO_CASH,
+      metadata: { busha: { quote, transfer } },
+    });
 
-    // // ✅ Step 3: Return data to client
-    // return {
-    //   id: deposit.id,
-    //   asset,
-    //   network,
-    //   amount,
-    //   address: deposit.address,
-    //   expiresAt: deposit.expires_at,
-    //   status: deposit.status,
-    // };
+    await this.deposits.save(deposit);
+
+    this.logger.log(`💾 Deposit record created for ${asset} → ${deposit.id}`);
+
+    // ✅ Step 3: Return data to client
+    return {
+      id: deposit.id,
+      asset,
+      network,
+      amount,
+      exchangeRate,
+      convertedAmount,
+      address: deposit.address,
+      expiresAt: deposit.expires_at,
+      status: deposit.status,
+    };
   } catch (error) {
     this.logger.error(`❌ Failed to generate deposit wallet`, error);
     throw error;

@@ -15,6 +15,12 @@ export class AssetListDto {
   @ApiProperty({ example: 'Tether' })
   description: string;
 
+  @ApiProperty({ example: '1450' })
+  buyPrice: number;
+
+  @ApiProperty({ example: '1400' })
+  sellPrice: number;
+
   @ApiProperty({ type: [AssetNetworkDto] })
   networks: AssetNetworkDto[];
 }

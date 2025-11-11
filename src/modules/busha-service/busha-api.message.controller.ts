@@ -1,7 +1,7 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { BushaDepositService } from './wallet/busha-deposit.service';
-import { DepositStatus } from '@/entities/crypto-deposit.entity';
+import { CryptoTransactionStatus } from '@/entities/crypto-transaction.entity';
 
 
 @Controller()
@@ -10,7 +10,7 @@ export class BushaWebhookMessageController {
 
   constructor(private readonly depositService: BushaDepositService) {}
 
-  @MessagePattern({ cmd: 'busha.webhook.handle' })
+  @MessagePattern({ cmd: 'busha.sell.webhook' })
   async handleBushaWebhook(@Payload() payload: any) {
     this.logger.log(`📩 Received verified Busha webhook → ${payload.event}`);
 
@@ -27,7 +27,7 @@ export class BushaWebhookMessageController {
   }
 
   @MessagePattern({ cmd: 'busha.deposit.findByUser' })
-async handleFindDeposits(@Payload() payload: { userId: string; status?: DepositStatus }) {
+async handleFindDeposits(@Payload() payload: { userId: string; status?: CryptoTransactionStatus }) {
   return this.depositService.findDepositsByUserId(payload.userId, payload.status);
 }
 }

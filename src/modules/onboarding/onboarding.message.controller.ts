@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { OnboardingService } from './onboarding.service';
 import {
   RegisterDto,
@@ -79,5 +79,11 @@ export class OnboardingMessageController {
     @MessagePattern({ cmd: 'users.find.byId' })
   async handleFindUser(@Payload() payload: { userId: string }) {
     return this.svc.findById(payload.userId);
+  }
+
+   @MessagePattern({ cmd: 'onboarding.logout' })
+  async handleLogout(@Payload() payload: { userId: string }) {
+      return await this.svc.logout(payload.userId);
+ 
   }
 }

@@ -1,4 +1,4 @@
-import { Asset } from '@/entities/assets.entity';
+import { Asset, AssetType } from '@/entities/assets.entity';
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, HttpException } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
@@ -6,6 +6,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 import { AssetListDto } from './dto/asset.dto';
+import { SystemConfigService } from '../system-settings/system-config.service';
+import { ConfigStatus } from '@/entities/system-config.entity';
 
 @Injectable()
 export class BushaAPIService {
@@ -15,7 +17,11 @@ export class BushaAPIService {
   constructor(
     @InjectRepository(Asset)
     private readonly assetRepo: Repository<Asset>,
-    private readonly http: HttpService) {}
+    private readonly http: HttpService,
+    private readonly systemConfigService: SystemConfigService,
+  ) {}
+
+  
 
   private authHeaders() {
     const key = process.env.BUSHA_SECRET_KEY;
@@ -50,12 +56,19 @@ async listBuyPairs() {
       });
     }
 
+   const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
+const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
+const marginValue = Number(marginSetting?.value || 0);
+
+// ✅ Determine gain based on config status
+const gain = isMarginEnabled ? marginValue : 0;
+
     const result = {
       id: usdtPair.id,
       base: usdtPair.base,
       counter: usdtPair.counter,
-      buyPrice: Number(usdtPair.buy_price.amount)+5,
-      sellPrice: Number(usdtPair.sell_price.amount)-5,
+      buyPrice: Number(usdtPair.buy_price.amount) + gain,
+      sellPrice: Number(usdtPair.sell_price.amount) - gain,
     };
 
     this.logger.log(
@@ -75,22 +88,44 @@ async listBuyPairs() {
   }
 }
 
- async listAllActiveAssets(): Promise<AssetListDto[]> {
-    const assets = await this.assetRepo.find({
-      where: { is_active: true },
-      order: { order: 'ASC' },
-    });
-    const usdtExchange = await this.listBuyPairs()
+async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDto[]> {
+  // ✅ 1️⃣ Prepare DB filter
+  console.log(asset)
+  const whereCondition: any = { is_active: true };
+  if (type) whereCondition.type = type;
+  if(asset) whereCondition.code = asset;
 
-    return assets.map((a) => ({
+  const assets = await this.assetRepo.find({
+    where: whereCondition,
+    order: { order: 'ASC' },
+  });
+
+  // ✅ 2️⃣ Determine exchange pair based on requested asset
+  const baseAsset = asset || 'USDT';
+  const exchange = await this.listBuyPairs();
+
+  // ✅ 3️⃣ Fetch margin configuration from SystemConfig
+  const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
+  const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
+  const globalMargin = Number(marginSetting?.value || 0);
+
+  // ✅ 4️⃣ Map response dynamically
+  return assets.map((a) => {
+    const gain = isMarginEnabled ? (a.margin ?? globalMargin) : 0;
+
+    return {
       code: a.code,
       description: a.description,
-      networks: a.networks?.map((n) => ({
-        name: n.name,
-        value: n.value,
-      })) || [],
-      buyPrice: usdtExchange.buyPrice - a.margin,
-      sellPrice: usdtExchange.sellPrice - a.margin
-    }));
-  }
+      networks:
+        a.networks?.map((n) => ({
+          name: n.name,
+          value: n.value,
+        })) || [],
+      buyPrice: exchange.buyPrice - gain,
+      sellPrice: exchange.sellPrice - gain,
+      // marginApplied: gain,
+      // exchangeBase: baseAsset,
+    };
+  });
+}
 }

@@ -2,11 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { RpcException } from '@nestjs/microservices';
+import { RubiesTransferDto } from './dto/rubies-transfer.dto';
 
 @Injectable()
 export class RubiesService {
   private readonly logger = new Logger(RubiesService.name);
-  private readonly baseUrl = 'https://api-sme-dev.rubies.ng/dev/baas-transaction';
+  private readonly baseUrl = `${process.env.RUBIES_BASE_URL}/baas-transaction`;
   private readonly apiKey = process.env.RUBIES_SECRET_KEY!; // put your SK- key here
 
   constructor(private readonly http: HttpService) {}
@@ -22,6 +23,7 @@ export class RubiesService {
 
   /** 🏦 Get all Banks */
   async getBanks() {
+    console.log(this.baseUrl)
     const url = `${this.baseUrl}/bank-list`;
     const payload = { readAll: 'YES' };
 
@@ -61,7 +63,7 @@ export class RubiesService {
   }
 
   /** 💸 Fund Transfer */
-  async fundTransfer(dto: any) {
+  async fundTransfer(dto: RubiesTransferDto) {
     const url = `${this.baseUrl}/fund-transfer`;
 
     try {

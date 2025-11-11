@@ -526,5 +526,26 @@ export class OnboardingService {
   return user;
 }
 
+async logout(userId: string) {
+  try {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+      });
+    }
+
+    return { message: 'User logged out successfully' };
+  } catch (err) {
+    if (err instanceof RpcException) throw err;
+    this.logger.error('logout error', err);
+    throw new RpcException({
+      statusCode: 500,
+      message: 'Failed to logout user',
+    });
+  }
+}
+
   
 }

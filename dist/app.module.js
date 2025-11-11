@@ -20,7 +20,6 @@ const refresh_token_entity_1 = require("./entities/refresh-token.entity");
 const password_reset_entity_1 = require("./entities/password-reset.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
 const users_module_1 = require("./modules/users/users.module");
-const payout_module_1 = require("./modules/payout/payout.module");
 const notify_module_1 = require("./modules/notify/notify.module");
 const validation_module_1 = require("./modules/validation/validation.module");
 const onboarding_module_1 = require("./modules/onboarding/onboarding.module");
@@ -83,7 +82,6 @@ exports.AppModule = AppModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, refresh_token_entity_1.RefreshToken, password_reset_entity_1.PasswordReset, email_verification_entity_1.EmailVerification]),
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
-            payout_module_1.PayoutModule,
             notify_module_1.NotifyModule,
             validation_module_1.ValidationModule,
             onboarding_module_1.OnboardingModule,

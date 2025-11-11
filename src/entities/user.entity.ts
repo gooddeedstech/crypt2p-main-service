@@ -10,10 +10,8 @@ import {
   BeforeInsert,
 } from 'typeorm';
 import { Wallet } from './wallet.entity';
-import { Deposit } from './deposit.entity';
-import { Payout } from './payout.entity';
-import { LedgerEntry } from './ledger.entity';
 import { randomBytes } from 'crypto';
+import { CryptoTransaction } from './crypto-transaction.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -137,14 +135,8 @@ export class User {
   @OneToMany(() => Wallet, (w) => w.user)
   wallets: Wallet[];
 
-  @OneToMany(() => Deposit, (d) => d.userId)
-  deposits: Deposit[];
-
-  @OneToMany(() => Payout, (p) => p.user)
-  payouts: Payout[];
-
-  @OneToMany(() => LedgerEntry, (l) => l.user)
-  ledger: LedgerEntry[];
+  @OneToMany(() => CryptoTransaction, (d) => d.user_id)
+  transactions: CryptoTransaction[];
 
   // ✅ Audit
   @CreateDateColumn()

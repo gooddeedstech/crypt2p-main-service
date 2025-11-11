@@ -12,10 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = exports.BvnStatus = exports.KycLevel = exports.Gender = void 0;
 const typeorm_1 = require("typeorm");
 const wallet_entity_1 = require("./wallet.entity");
-const deposit_entity_1 = require("./deposit.entity");
-const payout_entity_1 = require("./payout.entity");
-const ledger_entity_1 = require("./ledger.entity");
 const crypto_1 = require("crypto");
+const crypto_transaction_entity_1 = require("./crypto-transaction.entity");
 var Gender;
 (function (Gender) {
     Gender["MALE"] = "male";
@@ -162,17 +160,9 @@ __decorate([
     __metadata("design:type", Array)
 ], User.prototype, "wallets", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => deposit_entity_1.Deposit, (d) => d.userId),
+    (0, typeorm_1.OneToMany)(() => crypto_transaction_entity_1.CryptoTransaction, (d) => d.user_id),
     __metadata("design:type", Array)
-], User.prototype, "deposits", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => payout_entity_1.Payout, (p) => p.user),
-    __metadata("design:type", Array)
-], User.prototype, "payouts", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => ledger_entity_1.LedgerEntry, (l) => l.user),
-    __metadata("design:type", Array)
-], User.prototype, "ledger", void 0);
+], User.prototype, "transactions", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

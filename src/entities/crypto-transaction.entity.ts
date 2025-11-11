@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export enum DepositStatus {
+export enum CryptoTransactionStatus {
   PENDING = 'PENDING',
   PROCESSING = 'PROCESSING',
   SUCCESSFUL = 'SUCCESSFUL',
@@ -14,13 +14,19 @@ export enum DepositStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export enum DepositType {
+export enum ExchangeTransactionStatus {
+  PENDING = 'PENDING',
+  SUCCESSFUL = 'SUCCESSFUL',
+  FAILED = 'FAILED',
+}
+
+export enum CryptoTransactionType {
   CRYPTO_TO_CASH = 'CRYPTO_TO_CASH',
   CASH_TO_CRYPTO = 'CASH_TO_CRYPTO',
 }
 
-@Entity('crypto_deposits')
-export class CryptoDeposit {
+@Entity('crypto_transactions')
+export class CryptoTransaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,8 +39,14 @@ export class CryptoDeposit {
   @Column({ type: 'varchar', length: 20 })
   network: string; // e.g. ERC20, BTC
 
+  @Column({ type: 'decimal', precision: 20, scale: 8, nullable: true })
+  exchangeRate?: number; // NGN/crypto rate at transaction time 
+
   @Column({ type: 'decimal', precision: 20, scale: 8 })
   amount: number;
+
+  @Column({ type: 'decimal', precision: 20, scale: 8, nullable: true })
+  convertedAmount: number;
 
   @Column({ type: 'varchar', nullable: true })
   quote_id: string;
@@ -48,17 +60,26 @@ export class CryptoDeposit {
   @Column({ type: 'timestamp', nullable: true })
   expires_at: Date;
 
-  @Column({ type: 'enum', enum: DepositStatus, default: DepositStatus.PENDING })
-  status: DepositStatus;
+  @Column({ type: 'enum', enum: CryptoTransactionStatus, default: CryptoTransactionStatus.PENDING })
+  status: CryptoTransactionStatus;
 
-  @Column({ type: 'enum', enum: DepositType, default: DepositType.CRYPTO_TO_CASH })
-  type: DepositType;
+  @Column({ type: 'enum', enum: CryptoTransactionType, default: CryptoTransactionType.CRYPTO_TO_CASH })
+  type: CryptoTransactionType;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-   @Column({ nullable: true })
+  @Column({ nullable: true })
   confirmed_at?: Date;
+
+  @Column({ type: 'enum', enum: ExchangeTransactionStatus, default: ExchangeTransactionStatus.PENDING })
+  exchange_status: ExchangeTransactionStatus;
+
+  @Column({ nullable: true })
+  exchange_confirmed_at?: Date;
+
+   @Column({ type: 'jsonb', nullable: true })
+  exchange_data?: Record<string, any>;
 
   @CreateDateColumn()
   created_at: Date;
