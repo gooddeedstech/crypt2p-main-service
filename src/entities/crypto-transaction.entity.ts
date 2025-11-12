@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BankDetail } from './bank-detail.entity';
+import { User } from './user.entity'; // ✅ import user
 
 export enum CryptoTransactionStatus {
   PENDING = 'PENDING',
@@ -35,6 +36,10 @@ export class CryptoTransaction {
 
   @Column()
   user_id: string;
+
+  @ManyToOne(() => User, (user) => user.transactions, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User; // ✅ added proper relation to User
 
   @Column({ type: 'varchar', length: 10 })
   asset: string; // e.g. BTC, USDT
@@ -70,10 +75,18 @@ export class CryptoTransaction {
   @Column({ type: 'timestamp', nullable: true })
   expires_at: Date;
 
-  @Column({ type: 'enum', enum: CryptoTransactionStatus, default: CryptoTransactionStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: CryptoTransactionStatus,
+    default: CryptoTransactionStatus.PENDING,
+  })
   status: CryptoTransactionStatus;
 
-  @Column({ type: 'enum', enum: CryptoTransactionType, default: CryptoTransactionType.CRYPTO_TO_CASH })
+  @Column({
+    type: 'enum',
+    enum: CryptoTransactionType,
+    default: CryptoTransactionType.CRYPTO_TO_CASH,
+  })
   type: CryptoTransactionType;
 
   @Column({ type: 'jsonb', nullable: true })
@@ -82,13 +95,17 @@ export class CryptoTransaction {
   @Column({ nullable: true })
   confirmed_at?: Date;
 
-  @Column({ type: 'enum', enum: ExchangeTransactionStatus, default: ExchangeTransactionStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: ExchangeTransactionStatus,
+    default: ExchangeTransactionStatus.PENDING,
+  })
   exchange_status: ExchangeTransactionStatus;
 
   @Column({ nullable: true })
   exchange_confirmed_at?: Date;
 
-   @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   exchange_data?: Record<string, any>;
 
   @CreateDateColumn()

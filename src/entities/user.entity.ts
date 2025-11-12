@@ -121,7 +121,7 @@ export class User {
   loginLogs: LoginLog[];
 
   @OneToMany(() => UserDevice, (d) => d.user)
-devices: UserDevice[];
+  devices: UserDevice[];
 
     // ✅ Account status
   @Column({ default: false })
