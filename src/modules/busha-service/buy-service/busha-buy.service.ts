@@ -49,14 +49,14 @@ export class BushaBuyService {
       // ✅ Fetch current Busha pair price for this asset
       const pair = await this.bushaAPIService.listAllActiveAssets(undefined, asset);
 
-      if (!pair || !pair.length || !pair[0].buyPrice) {
+      if (!pair || !pair.length || !pair[0].ngnBuyPrice) {
         throw new RpcException({
           statusCode: 404,
           message: `Unable to retrieve exchange rate for ${asset}`,
         });
       }
       const feeData = await this.feesService.findByAsset(asset);
-      const rate = Number(pair[0].buyPrice);
+      const rate = Number(pair[0].ngnBuyPrice);
       const convertedAmount = Number((amount / rate).toFixed(2));
       const amountPlusFees = amount + (feeData.fee * rate)
 

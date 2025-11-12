@@ -16,10 +16,10 @@ export class AssetListDto {
   description: string;
 
   @ApiProperty({ example: '1450' })
-  buyPrice: number;
+  ngnBuyPrice: number;
 
   @ApiProperty({ example: '1400' })
-  sellPrice: number;
+  ngnSellPrice: number;
 
   @ApiProperty({ type: [AssetNetworkDto] })
   networks: AssetNetworkDto[];

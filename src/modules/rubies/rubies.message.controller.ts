@@ -2,14 +2,23 @@ import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RubiesService } from './rubies.service';
 import { RubiesBankMapperService } from './ rubies-bank-mapper.service';
+import { RubiesKYCService } from './rubie-kyc.service';
+import { RubiesBvnValidationDto } from './dto/rubie-kyc.dto';
 
 @Controller()
 export class RubiesMessageController {
   private readonly logger = new Logger(RubiesMessageController.name);
 
   constructor(private readonly rubiesService: RubiesService,
-    private readonly mapper: RubiesBankMapperService
+    private readonly mapper: RubiesBankMapperService,
+    private readonly rubiesKycService: RubiesKYCService
   ) {}
+
+  @MessagePattern({ cmd: 'rubies.kyc.validateBvn' })
+  async handleBvnValidation(@Payload() payload: RubiesBvnValidationDto) {
+    this.logger.log(`📩 [rubies.kyc.validateBvn] ${JSON.stringify(payload)}`);
+    return this.rubiesKycService.validateBvn(payload);
+  }
 
   @MessagePattern({ cmd: 'rubies.bank.list' })
   async handleGetBanks() {
@@ -43,7 +52,7 @@ export class RubiesMessageController {
     const rubiesCode = await this.mapper.getRubiesBankCode(payload.paystackCode);
     return { paystackCode: payload.paystackCode, rubiesCode };
   }
-
+ 
   @MessagePattern({ cmd: 'rubies.bank.mappings' })
   async handleAllMappings() {
     this.logger.log('📋 Fetching all Paystack → Rubies mappings');

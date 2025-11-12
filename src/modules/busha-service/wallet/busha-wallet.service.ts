@@ -101,7 +101,7 @@ export class BushaWalletService {
    * ✅ Combined Helper
    * Creates both Quote + Transfer and returns a wallet address
    */
- async generateDepositWallet(userId: string, asset: string, amount: string, network: string) {
+ async generateDepositWallet(userId: string, asset: string, amount: string, network: string, bankId: string) {
   try {
     // ✅ Step 1: Create quote + transfer
     const quote = await this.createQuote(asset, amount, network);
@@ -110,10 +110,27 @@ export class BushaWalletService {
     // ✅ Step 2: Save deposit record
 
      const pair = await this.bushaAPIService.listAllActiveAssets(undefined, asset);
-      const rate = pair[0].buyPrice; 
+
+     
+      const rate = pair[0].ngnBuyPrice; 
+
+     
      const numericAmount = Number(amount);
     const numericRate = Number(rate);
-    const convertedAmount = numericAmount * numericRate;
+    let convertedAmount = 0
+   if (asset !== 'USDT' && asset !== 'USDC') {
+  // 🧠 Asset is NOT a stablecoin → get its rate in USDT
+  const usdRate = await this.bushaAPIService.getRateInUSDT(asset);
+
+  // 💰 Convert from asset → USDT → NGN
+  convertedAmount = numericAmount * (numericRate * usdRate.sellPrice);
+  this.logger.log(`💱 Conversion via USD rate: ${asset} → USDT → NGN = ${convertedAmount}`);
+} else {
+  // 🧾 Asset is already a stablecoin (USDT or USDC)
+  convertedAmount = numericAmount * numericRate;
+  this.logger.log(`💵 Direct conversion: ${asset} → NGN = ${convertedAmount}`);
+}
+    
     if (isNaN(numericAmount) || isNaN(numericRate)) {
       throw new RpcException({
         statusCode: 400,
@@ -130,6 +147,7 @@ export class BushaWalletService {
       convertedAmount: convertedAmount,
       quote_id: quote.id,
       transfer_id: transfer.transferId,
+      bank_id: bankId,
       address: transfer.address,
       expires_at: transfer.expiresAt,
       status: CryptoTransactionStatus.PENDING,

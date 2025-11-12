@@ -22,12 +22,12 @@ async listPairs(@Payload() payload?: { type?: AssetType }) {
     @MessagePattern({ cmd: 'busha.wallet.generate' })
   async handleGenerateWallet(
     @Payload()
-    payload: { userId: string, asset: string; amount: string; exchangeRate: string; network: string },
+    payload: { userId: string, asset: string; amount: string; exchangeRate: string; network: string, bankId: string },
   ) {
     this.logger.log(`📩 Received wallet generation request: ${JSON.stringify(payload)}`);
 
-    const { userId, asset, amount, exchangeRate,  network } = payload;
-    return await this.bushaWalletService.generateDepositWallet(userId, asset, amount, network);
+    const { userId, asset, amount, exchangeRate,  network, bankId } = payload;
+    return await this.bushaWalletService.generateDepositWallet(userId, asset, amount, network, bankId);
   }
 
 

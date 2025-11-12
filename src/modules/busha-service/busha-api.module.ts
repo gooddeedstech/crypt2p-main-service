@@ -3,7 +3,6 @@ import { HttpModule } from '@nestjs/axios';
 import { BushaAPIService } from './busha-api.service';
 import { BushaAPIMessageController } from './busha-api.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Wallet } from '@/entities/wallet.entity';
 import { User } from '@/entities/user.entity';
 import { WebhookEvent } from '@/entities/webhook-event.entity';
 import { Asset } from '@/entities/assets.entity';
@@ -19,19 +18,22 @@ import { OnboardingService } from '../onboarding/onboarding.service';
 import { PasswordReset } from '@/entities/password-reset.entity';
 import { EmailVerification } from '@/entities/email-verification.entity';
 import { JwtService } from '@nestjs/jwt';
-import { EmailService } from '../notification/email.service';
+import { EmailService } from '../email-service/email.service';
 import { PaystackService } from '../paystack/paystack.service';
 import { BushaBuyMessageController } from './buy-service/busha-buy.message.controller';
 import { BushaBuyService } from './buy-service/busha-buy.service';
 import { FeesService } from '../fees/fees.service';
 import { FeesMessageController } from '../fees/fees.message.controller';
 import { Fee } from '@/entities/fees.entity';
+import { BankDetail } from '@/entities/bank-detail.entity';
+import { LoginLogService } from '../onboarding/login-log.service';
+import { LoginLog } from '@/entities/login-log.entity';
 
  
 @Module({
-  imports: [TypeOrmModule.forFeature([Wallet, User, Fee, PasswordReset, EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig]), HttpModule],
+  imports: [TypeOrmModule.forFeature([ User, Fee, PasswordReset, LoginLog,  EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig, BankDetail]), HttpModule],
   
-  providers: [BushaAPIService, JwtService, EmailService, PaystackService, FeesService, BushaBuyService , BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  providers: [BushaAPIService, JwtService, EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
   controllers: [BushaAPIMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
   exports: [BushaAPIService],
 })

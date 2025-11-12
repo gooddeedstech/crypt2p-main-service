@@ -10,21 +10,21 @@ import { z } from 'zod';
 
 // ✅ Entities & Modules (same as before)
 import { User } from './entities/user.entity';
-import { Wallet } from './entities/wallet.entity';
 import { WebhookEvent } from './entities/webhook-event.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordReset } from './entities/password-reset.entity';
 import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
 import { NotifyModule } from './modules/notify/notify.module';
 import { ValidationModule } from './modules/validation/validation.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { BushaAPIModule } from './modules/busha-service/busha-api.module';
 import { OnboardingService } from './modules/onboarding/onboarding.service';
 import { EmailVerification } from './entities/email-verification.entity';
-import { EmailService } from './modules/notification/email.service';
+import { EmailService } from './modules/email-service/email.service';
 import { PaystackService } from './modules/paystack/paystack.service';
 import { RubiesModule } from './modules/rubies/rubies.module';
+import { LoginLogService } from './modules/onboarding/login-log.service';
+import { LoginLog } from './entities/login-log.entity';
 
 @Module({
   imports: [
@@ -78,9 +78,8 @@ import { RubiesModule } from './modules/rubies/rubies.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
 
     // ✅ Entities + feature modules
-    TypeOrmModule.forFeature([User, RefreshToken, PasswordReset, EmailVerification]),
+    TypeOrmModule.forFeature([User, RefreshToken, PasswordReset, EmailVerification, LoginLog]),
     AuthModule,
-    UsersModule,
     NotifyModule,
     ValidationModule,
     OnboardingModule,
@@ -88,7 +87,7 @@ import { RubiesModule } from './modules/rubies/rubies.module';
     RubiesModule,
   ],
 
-  providers: [OnboardingService, EmailService, PaystackService],
+  providers: [OnboardingService, EmailService, PaystackService, LoginLogService],
   exports: [JwtModule],
 })
 export class AppModule {}

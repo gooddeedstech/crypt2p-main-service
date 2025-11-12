@@ -11,9 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = exports.BvnStatus = exports.KycLevel = exports.Gender = void 0;
 const typeorm_1 = require("typeorm");
-const wallet_entity_1 = require("./wallet.entity");
 const crypto_1 = require("crypto");
 const crypto_transaction_entity_1 = require("./crypto-transaction.entity");
+const bank_detail_entity_1 = require("./bank-detail.entity");
+const login_log_entity_1 = require("./login-log.entity");
+const user_wallet_entity_1 = require("./user-wallet.entity");
+const user_device_entity_1 = require("./user-device.entity");
 var Gender;
 (function (Gender) {
     Gender["MALE"] = "male";
@@ -89,50 +92,18 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "pinEnabled", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], User.prototype, "isDisabled", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
-    __metadata("design:type", Number)
-], User.prototype, "failedPinAttempts", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
-    __metadata("design:type", Date)
-], User.prototype, "pinLockedUntil", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
-    __metadata("design:type", Date)
-], User.prototype, "lastLoginAt", void 0);
-__decorate([
-    (0, typeorm_1.DeleteDateColumn)(),
-    __metadata("design:type", Date)
-], User.prototype, "deletedAt", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], User.prototype, "paystackCustomerCode", void 0);
-__decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "virtualAccountNumber", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], User.prototype, "bankName", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], User.prototype, "bankAccountNo", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], User.prototype, "bankCode", void 0);
 __decorate([
     (0, typeorm_1.Index)(),
     (0, typeorm_1.Column)({ unique: true, nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "referralCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "rewardPoint", void 0);
 __decorate([
     (0, typeorm_1.BeforeInsert)(),
     __metadata("design:type", Function),
@@ -156,13 +127,45 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "bvnLastCheckedAt", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => wallet_entity_1.Wallet, (w) => w.user),
+    (0, typeorm_1.OneToMany)(() => bank_detail_entity_1.BankDetail, (b) => b.user),
+    __metadata("design:type", Array)
+], User.prototype, "bankAccounts", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => user_wallet_entity_1.UserWallet, (w) => w.user),
     __metadata("design:type", Array)
 ], User.prototype, "wallets", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => crypto_transaction_entity_1.CryptoTransaction, (d) => d.user_id),
     __metadata("design:type", Array)
 ], User.prototype, "transactions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => login_log_entity_1.LoginLog, (log) => log.user),
+    __metadata("design:type", Array)
+], User.prototype, "loginLogs", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => user_device_entity_1.UserDevice, (d) => d.user),
+    __metadata("design:type", Array)
+], User.prototype, "devices", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isDisabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "failedPinAttempts", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "pinLockedUntil", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "lastLoginAt", void 0);
+__decorate([
+    (0, typeorm_1.DeleteDateColumn)(),
+    __metadata("design:type", Date)
+], User.prototype, "deletedAt", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

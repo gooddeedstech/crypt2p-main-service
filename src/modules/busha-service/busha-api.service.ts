@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger, HttpException } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { firstValueFrom } from 'rxjs';
+import { exhaustAll, firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 import { AssetListDto } from './dto/asset.dto';
 import { SystemConfigService } from '../system-settings/system-config.service';
@@ -56,9 +56,11 @@ async listBuyPairs() {
       });
     }
 
+  
+
    const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
 const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
-const marginValue = Number(marginSetting?.value || 0);
+const marginValue = Number(marginSetting?.ngnValue || 0);
 
 // ✅ Determine gain based on config status
 const gain = isMarginEnabled ? marginValue : 0;
@@ -69,6 +71,7 @@ const gain = isMarginEnabled ? marginValue : 0;
       counter: usdtPair.counter,
       buyPrice: Number(usdtPair.buy_price.amount) + gain,
       sellPrice: Number(usdtPair.sell_price.amount) - gain,
+     
     };
 
     this.logger.log(
@@ -88,9 +91,73 @@ const gain = isMarginEnabled ? marginValue : 0;
   }
 }
 
+async getRateInUSDT(asset: string) {
+    try {
+      const url = `${this.baseUrl}/v1/pairs`;
+      this.logger.log(`📡 Fetching Busha pairs → ${url}`);
+
+      const res = await firstValueFrom(this.http.get(url));
+      const pairs = res.data?.data ?? [];
+
+      if (!Array.isArray(pairs) || pairs.length === 0) {
+        throw new RpcException({
+          statusCode: 404,
+          message: 'No pairs found from Busha API',
+        });
+      }
+
+      // 🧠 Try to find rate where USDT is base or counter
+      const pair =
+        pairs.find((p: any) => p.id === `USDT${asset}`) ||
+        pairs.find((p: any) => p.id === `${asset}USDT`);
+
+      if (!pair) {
+        throw new RpcException({
+          statusCode: 404,
+          message: `No matching USDT pair found for ${asset}`,
+        });
+      }
+
+      
+
+      // ⚙️ Margin configuration
+      const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
+      const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
+      const marginValue = Number(marginSetting?.usdValue || 0);
+      const gain = isMarginEnabled ? marginValue : 0;
+
+      const rateInfo = {
+        id: pair.id,
+        base: pair.base,
+        counter: pair.counter,
+        buyPrice: Number(pair.buy_price.amount) + gain,
+        sellPrice: Number(pair.sell_price.amount) - gain,
+        minBuy: pair.min_buy_amount.amount ,
+      maxBuy: pair.max_buy_amount.amount ,
+      minSell: pair.min_sell_amount.amount ,
+      maxSell: pair.max_sell_amount.amount ,
+      };
+
+      this.logger.log(
+        `💱 Rate [${pair.id}] → Buy: ${rateInfo.buyPrice}, Sell: ${rateInfo.sellPrice}`,
+      );
+      // console.log(rateInfo)
+      return rateInfo;
+    } catch (err: any) {
+      const errorResponse = {
+        message:
+          err.response?.data?.message || err.message || 'Failed to fetch Busha rates',
+        status: err.response?.status || 500,
+      };
+
+      this.logger.error('❌ getRateInUSDT error:', errorResponse);
+      throw new RpcException(errorResponse);
+    }
+  }
+
 async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDto[]> {
   // ✅ 1️⃣ Prepare DB filter
-  console.log(asset)
+ 
   const whereCondition: any = { is_active: true };
   if (type) whereCondition.type = type;
   if(asset) whereCondition.code = asset;
@@ -100,18 +167,22 @@ async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDt
     order: { order: 'ASC' },
   });
 
-  // ✅ 2️⃣ Determine exchange pair based on requested asset
+
   const baseAsset = asset || 'USDT';
   const exchange = await this.listBuyPairs();
 
-  // ✅ 3️⃣ Fetch margin configuration from SystemConfig
-  const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
-  const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
-  const globalMargin = Number(marginSetting?.value || 0);
 
   // ✅ 4️⃣ Map response dynamically
-  return assets.map((a) => {
-    const gain = isMarginEnabled ? (a.margin ?? globalMargin) : 0;
+const results = await Promise.all(
+  assets.map(async (a) => {
+    let usdAsset = { buyPrice: 1, sellPrice: 1, minBuy: 1, maxBuy: 2000, minSell: 10, maxSell: 5000 }; // default for USDT/USDC
+
+    // Fetch USD reference rate for non-stable assets
+    if (a.code !== 'USDT' && a.code !== 'USDC') {
+     
+        usdAsset = await this.getRateInUSDT(a.code);
+    
+    }
 
     return {
       code: a.code,
@@ -121,11 +192,20 @@ async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDt
           name: n.name,
           value: n.value,
         })) || [],
-      buyPrice: exchange.buyPrice - gain,
-      sellPrice: exchange.sellPrice - gain,
+      usdBuyPrice: usdAsset.buyPrice,
+      usdSellPrice: usdAsset.sellPrice,
+      ngnBuyPrice: exchange.buyPrice,
+      ngnSellPrice: exchange.sellPrice,
+      minBuyValue: usdAsset.minBuy,
+      maxBuyValue: usdAsset.maxBuy,
+      minSellValue: usdAsset.minSell,
+      maxSellValue: usdAsset.maxSell
       // marginApplied: gain,
       // exchangeBase: baseAsset,
     };
-  });
+  }),
+);
+
+return results;
 }
 }

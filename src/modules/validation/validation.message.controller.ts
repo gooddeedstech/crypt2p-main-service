@@ -48,33 +48,33 @@ export class ValidationMessageController {
     }
   }
 
-@MessagePattern({ cmd: 'bvn.verify' })
-async verifyBVN(@Payload() dto: VerifyBvnDto) {
-  this.logger.log(
-    `➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.account_number}, Bank: ${dto.bank_code}`,
-  );
+// @MessagePattern({ cmd: 'bvn.verify' })
+// async verifyBVN(@Payload() dto: VerifyBvnDto) {
+//   this.logger.log(
+//     `➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.account_number}, Bank: ${dto.bank_code}`,
+//   );
 
-  if (!dto.bvn || !dto.account_number || !dto.bank_code || !dto.first_name || !dto.last_name) {
-    throw new BadRequestException(
-      'bvn, accountNumber, bankCode, firstName & lastName are required'
-    );
-  }
+//   if (!dto.bvn || !dto.account_number || !dto.bank_code || !dto.first_name || !dto.last_name) {
+//     throw new BadRequestException(
+//       'bvn, accountNumber, bankCode, firstName & lastName are required'
+//     );
+//   }
 
-  try {
-    // ✅ Passing null for actor for now
-    return await this.service.verifyBVNWithAccount(dto);
-  } catch (err) {
-    this.logger.error('[bvn.verify] Error', err);
-    throw new InternalServerErrorException(
-      err?.message || 'BVN verification failed'
-    );
-  }
-}
+//   try {
+//     // ✅ Passing null for actor for now
+//     return await this.service.verifyBVNWithAccount(dto);
+//   } catch (err) {
+//     this.logger.error('[bvn.verify] Error', err);
+//     throw new InternalServerErrorException(
+//       err?.message || 'BVN verification failed'
+//     );
+//   }
+// }
 
- @MessagePattern({ cmd: 'paystack.kyc.webhook' })
-  processWebhook(@Payload() payload: any) {
-    return this.service.processPaystackWebhook(payload);
-  }
+//  @MessagePattern({ cmd: 'paystack.kyc.webhook' })
+//   processWebhook(@Payload() payload: any) {
+//     return this.service.processPaystackWebhook(payload);
+//   }
 
   
 }

@@ -20,7 +20,10 @@ export class SystemConfig {
   setting: string; // e.g. "ALLOW_WITHDRAWALS", "ENABLE_2FA"
 
    @Column({ type: 'int', nullable: true })
-  value?: number; 
+  ngnValue?: number; 
+
+     @Column({ type: 'int', nullable: true })
+  usdValue?: number; 
 
   @Column({
     type: 'enum',

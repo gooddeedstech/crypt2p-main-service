@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { BankDetail } from './bank-detail.entity';
 
 export enum CryptoTransactionStatus {
   PENDING = 'PENDING',
@@ -53,6 +56,13 @@ export class CryptoTransaction {
 
   @Column({ type: 'varchar', nullable: true })
   transfer_id: string;
+
+  @Column({ nullable: true })
+  bank_id: string;
+
+  @ManyToOne(() => BankDetail, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'bank_id' })
+  bank: BankDetail;
 
   @Column({ type: 'varchar', nullable: true })
   address: string;

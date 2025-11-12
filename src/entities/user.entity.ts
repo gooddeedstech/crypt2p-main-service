@@ -9,9 +9,12 @@ import {
   Index,
   BeforeInsert,
 } from 'typeorm';
-import { Wallet } from './wallet.entity';
 import { randomBytes } from 'crypto';
 import { CryptoTransaction } from './crypto-transaction.entity';
+import { BankDetail } from './bank-detail.entity';
+import { LoginLog } from './login-log.entity';
+import { UserWallet } from './user-wallet.entity';
+import { UserDevice } from './user-device.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -73,43 +76,16 @@ export class User {
   @Column({ default: false })
   pinEnabled: boolean;
 
-  // ✅ Account status
-  @Column({ default: false })
-  isDisabled: boolean;
-
-  @Column({ default: 0 })
-  failedPinAttempts: number;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  pinLockedUntil?: Date | null;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  lastLoginAt?: Date | null;
-
-  @DeleteDateColumn()
-  deletedAt?: Date | null;
-
-  // ✅ Paystack Integration
-  @Column({ nullable: true })
-  paystackCustomerCode?: string;
-
   @Column({ nullable: true })
   virtualAccountNumber?: string;
-
-  @Column({ nullable: true })
-  bankName?: string;
-
-  // ✅ Payout Banking
-  @Column({ nullable: true })
-  bankAccountNo?: string;
-
-  @Column({ nullable: true })
-  bankCode?: string;
 
   // ✅ Referral System
   @Index()
   @Column({ unique: true, nullable: true })
   referralCode: string;
+
+  @Column({ nullable: true })
+  rewardPoint?: string;
 
   @BeforeInsert()
   generateReferralCode() {
@@ -132,11 +108,36 @@ export class User {
   bvnLastCheckedAt?: Date | null;
 
   // ✅ Wallet + Financial Records
-  @OneToMany(() => Wallet, (w) => w.user)
-  wallets: Wallet[];
+  @OneToMany(() => BankDetail, (b) => b.user)
+  bankAccounts: BankDetail[];
+
+  @OneToMany(() => UserWallet, (w) => w.user)
+  wallets: UserWallet[];
 
   @OneToMany(() => CryptoTransaction, (d) => d.user_id)
   transactions: CryptoTransaction[];
+
+  @OneToMany(() => LoginLog, (log) => log.user)
+  loginLogs: LoginLog[];
+
+  @OneToMany(() => UserDevice, (d) => d.user)
+devices: UserDevice[];
+
+    // ✅ Account status
+  @Column({ default: false })
+  isDisabled: boolean;
+
+  @Column({ default: 0 })
+  failedPinAttempts: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pinLockedUntil?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lastLoginAt?: Date | null;
+
+  @DeleteDateColumn()
+  deletedAt?: Date | null;
 
   // ✅ Audit
   @CreateDateColumn()

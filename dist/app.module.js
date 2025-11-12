@@ -19,16 +19,17 @@ const user_entity_1 = require("./entities/user.entity");
 const refresh_token_entity_1 = require("./entities/refresh-token.entity");
 const password_reset_entity_1 = require("./entities/password-reset.entity");
 const auth_module_1 = require("./modules/auth/auth.module");
-const users_module_1 = require("./modules/users/users.module");
 const notify_module_1 = require("./modules/notify/notify.module");
 const validation_module_1 = require("./modules/validation/validation.module");
 const onboarding_module_1 = require("./modules/onboarding/onboarding.module");
 const busha_api_module_1 = require("./modules/busha-service/busha-api.module");
 const onboarding_service_1 = require("./modules/onboarding/onboarding.service");
 const email_verification_entity_1 = require("./entities/email-verification.entity");
-const email_service_1 = require("./modules/notification/email.service");
+const email_service_1 = require("./modules/email-service/email.service");
 const paystack_service_1 = require("./modules/paystack/paystack.service");
 const rubies_module_1 = require("./modules/rubies/rubies.module");
+const login_log_service_1 = require("./modules/onboarding/login-log.service");
+const login_log_entity_1 = require("./entities/login-log.entity");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -79,16 +80,15 @@ exports.AppModule = AppModule = __decorate([
             // ✅ Rate limiting
             throttler_1.ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
             // ✅ Entities + feature modules
-            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, refresh_token_entity_1.RefreshToken, password_reset_entity_1.PasswordReset, email_verification_entity_1.EmailVerification]),
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, refresh_token_entity_1.RefreshToken, password_reset_entity_1.PasswordReset, email_verification_entity_1.EmailVerification, login_log_entity_1.LoginLog]),
             auth_module_1.AuthModule,
-            users_module_1.UsersModule,
             notify_module_1.NotifyModule,
             validation_module_1.ValidationModule,
             onboarding_module_1.OnboardingModule,
             busha_api_module_1.BushaAPIModule,
             rubies_module_1.RubiesModule,
         ],
-        providers: [onboarding_service_1.OnboardingService, email_service_1.EmailService, paystack_service_1.PaystackService],
+        providers: [onboarding_service_1.OnboardingService, email_service_1.EmailService, paystack_service_1.PaystackService, login_log_service_1.LoginLogService],
         exports: [jwt_1.JwtModule],
     })
 ], AppModule);

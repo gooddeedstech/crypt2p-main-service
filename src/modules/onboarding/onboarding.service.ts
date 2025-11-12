@@ -12,7 +12,7 @@ import { RpcException } from '@nestjs/microservices';
 import { User } from '@/entities/user.entity';
 import { PasswordReset } from '@/entities/password-reset.entity';
 import { EmailVerification } from '@/entities/email-verification.entity';
-import { EmailService } from '../notification/email.service';
+import { EmailService } from '../email-service/email.service';
 import { PaystackService } from '../paystack/paystack.service';
 import {
   ChangePasswordDto,
@@ -24,6 +24,8 @@ import {
 } from './dto/dtos';
 import { OtpUtil } from '@/common/otp.util';
 import { ChangePinDto, UpdateProfileDto } from './dto/user-update.dto';
+import { LoginLogService } from './login-log.service';
+import { LoginMethod, LoginStatus } from '@/entities/login-log.entity';
 
 @Injectable()
 export class OnboardingService {
@@ -38,7 +40,7 @@ export class OnboardingService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly email: EmailService,
-    private readonly paystack: PaystackService,
+    private readonly loginLogService: LoginLogService,
   ) {}
 
   private async hash(value: string): Promise<string> {
@@ -97,12 +99,7 @@ export class OnboardingService {
         });
       }
 
-      const customer = await this.paystack.createCustomer(
-        dto.email,
-        dto.phoneNumber,
-        dto.firstName,
-        dto.lastName,
-      );
+
 
       const user = this.users.create({
         email: dto.email,
@@ -113,7 +110,7 @@ export class OnboardingService {
         country: dto.country,
         dob: dto.dob ? new Date(dto.dob) : null,
         gender: dto.gender ?? null,
-        paystackCustomerCode: customer.customer_code,
+   
       });
 
       await this.users.save(user);
@@ -124,7 +121,7 @@ export class OnboardingService {
       return {
         message: 'Account created successfully',
         userId: user.id,
-        paystackCustomerCode: user.paystackCustomerCode,
+       
       };
     } catch (error) {
       this.logger.error('Register error:', error);
@@ -138,49 +135,81 @@ export class OnboardingService {
   /* --------------------------------------------------
    ✅ LOGIN WITH EMAIL + PASSWORD
   ---------------------------------------------------*/
-  async loginPassword(dto: LoginDto) {
-    try {
-      const user = await this.users.findOne({
-        where: { email: dto.email, deletedAt: IsNull() },
-      });
+ async loginPassword(dto: LoginDto) {
+  try {
+    const user = await this.users.findOne({
+      where: { email: dto.email, deletedAt: IsNull() },
+    });
 
-      if (!user) {
-        throw new RpcException({
-          statusCode: 401,
-          message: 'Invalid login credentials',
-        });
-      }
+    if (!user) {
+      await this.loginLogService.recordLogin(
+        dto.email, // no user ID since not found
+        LoginMethod.PASSWORD,
+        LoginStatus.FAILED,
+        'Invalid login credentials',
+      );
 
-      if (user.isDisabled) {
-        throw new RpcException({
-          statusCode: 403,
-          message: 'Account disabled',
-        });
-      }
-
-      if (!(await this.compare(dto.password, user.passwordHash))) {
-        throw new RpcException({
-          statusCode: 401,
-          message: 'Invalid login credentials',
-        });
-      }
-
-      user.lastLoginAt = new Date();
-      await this.users.save(user);
-
-      return {
-        ...this.issueTokens(user),
-        user,
-      };
-    } catch (error) {
-      if (error instanceof RpcException) throw error;
-      this.logger.error('loginPassword error', error);
       throw new RpcException({
-        statusCode: 500,
-        message: 'Unexpected error occurred',
+        statusCode: 401,
+        message: 'Invalid login credentials',
       });
     }
+
+    if (user.isDisabled) {
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PASSWORD,
+        LoginStatus.FAILED,
+        'Account disabled',
+      );
+
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account disabled',
+      });
+    }
+  const maxAttempts = 5
+    const isValid = await this.compare(dto.password, user.passwordHash);
+    if (!isValid) {
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PASSWORD,
+        LoginStatus.FAILED,
+        'Invalid password',
+      );
+
+      throw new RpcException({
+        statusCode: 401,
+        message: `Invalid login credentials: ${user.failedPinAttempts - maxAttempts} Login Attempts Remaining. Thanks.`,
+       
+      });
+    }
+
+    // ✅ Successful login
+    user.lastLoginAt = new Date();
+    await this.users.save(user);
+
+    await this.loginLogService.recordLogin(
+      user.id,
+      LoginMethod.PASSWORD,
+      LoginStatus.SUCCESS,
+    );
+
+    return {
+      ...this.issueTokens(user),
+      user,
+    };
+  } catch (error) {
+    if (error instanceof RpcException) throw error;
+
+    this.logger.error('loginPassword error', error);
+
+    throw new RpcException({
+      statusCode: 500,
+      message: 'Unexpected error occurred',
+    });
   }
+}
 
   /* --------------------------------------------------
    ✅ SET PIN
@@ -216,73 +245,122 @@ export class OnboardingService {
   /* --------------------------------------------------
    ✅ LOGIN WITH PIN
   ---------------------------------------------------*/
-  async loginPin(dto: LoginPinDto) {
-    try {
-      const user = await this.users.findOne({
-        where: { email: dto.email, deletedAt: IsNull() },
-      });
 
-      if (!user) {
-        throw new RpcException({
-          statusCode: 401,
-          message: 'Invalid login credentials',
-        });
-      }
 
-      if (!user.pinEnabled) {
-        throw new RpcException({
-          statusCode: 403,
-          message: 'PIN not set',
-        });
-      }
+async loginPin(dto: LoginPinDto) {
+  try {
+    const user = await this.users.findOne({
+      where: { email: dto.email, deletedAt: IsNull() },
+    });
 
-      if (user.isDisabled) {
-        throw new RpcException({
-          statusCode: 403,
-          message: 'Account disabled',
-        });
-      }
+    if (!user) {
+      await this.loginLogService.recordLogin(
+        dto.email,
+        LoginMethod.PIN,
+        LoginStatus.FAILED,
+        'Invalid login credentials',
+      );
 
-      if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
-        const remainingMs = user.pinLockedUntil.getTime() - Date.now();
-        const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
-
-        throw new RpcException({
-          statusCode: 403,
-          message: `PIN temporarily locked, try again in ${remainingMinutes} minute(s)`,
-        });
-      }
-
-      const isValid = await this.compare(dto.pin, user.pinHash);
-      if (!isValid) {
-        user.failedPinAttempts = (user.failedPinAttempts || 0) + 1;
-        if (user.failedPinAttempts >= 5) {
-          user.pinLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-        }
-        await this.users.save(user);
-
-        throw new RpcException({
-          statusCode: 401,
-          message: 'Invalid PIN',
-        });
-      }
-
-      user.failedPinAttempts = 0;
-      user.pinLockedUntil = null;
-      user.lastLoginAt = new Date();
-      await this.users.save(user);
-
-      return { ...this.issueTokens(user),
-        user };
-    } catch (error) {
-      if (error instanceof RpcException) throw error;
-      this.logger.error('loginPin error', error);
       throw new RpcException({
-        statusCode: 500,
-        message: 'Unexpected error occurred',
+        statusCode: 401,
+        message: 'Invalid login credentials',
       });
     }
+
+    if (!user.pinEnabled) {
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PIN,
+        LoginStatus.FAILED,
+        'PIN not set',
+      );
+
+      throw new RpcException({
+        statusCode: 403,
+        message: 'PIN not set',
+      });
+    }
+
+    if (user.isDisabled) {
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PIN,
+        LoginStatus.FAILED,
+        'Account disabled',
+      );
+
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account disabled',
+      });
+    }
+
+    // 🔒 Handle locked PINs
+    if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
+      const remainingMs = user.pinLockedUntil.getTime() - Date.now();
+      const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
+
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PIN,
+        LoginStatus.FAILED,
+        `PIN temporarily locked, try again in ${remainingMinutes} minute(s)`,
+      );
+
+      throw new RpcException({
+        statusCode: 403,
+        message: `PIN temporarily locked, try again in ${remainingMinutes} minute(s)`,
+      });
+    }
+    const maxAttempts = 5
+    // ✅ Validate PIN
+    const isValid = await this.compare(dto.pin, user.pinHash);
+    if (!isValid) {
+      user.failedPinAttempts = (user.failedPinAttempts || 0) + 1;
+      if (user.failedPinAttempts >= 5) {
+        user.pinLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+      }
+      await this.users.save(user);
+     
+      await this.loginLogService.recordLogin(
+        user.id,
+        LoginMethod.PIN,
+        LoginStatus.FAILED,
+        'Invalid PIN',
+      );
+
+      throw new RpcException({
+        statusCode: 401,
+        message: `Invalid PIN: ${user.failedPinAttempts - maxAttempts} Login Attempts Remaining. Thanks.`,
+      });
+    }
+
+    // ✅ Successful login
+    user.failedPinAttempts = 0;
+    user.pinLockedUntil = null;
+    user.lastLoginAt = new Date();
+    await this.users.save(user);
+
+    await this.loginLogService.recordLogin(
+      user.id,
+      LoginMethod.PIN,
+      LoginStatus.SUCCESS,
+    );
+
+    return {
+      ...this.issueTokens(user),
+      user,
+    };
+  } catch (error) {
+    if (error instanceof RpcException) throw error;
+    this.logger.error('loginPin error', error);
+
+    throw new RpcException({
+      statusCode: 500,
+      message: 'Unexpected error occurred',
+    });
   }
+}
 
   /* --------------------------------------------------
    ✅ START PASSWORD RESET
@@ -392,7 +470,7 @@ export class OnboardingService {
         expiresAt: new Date(Date.now() + 1000 * 60 * 15),
         used: false,
       });
-
+      
       await this.email.sendOtp(email, code);
 
       return {
@@ -521,7 +599,14 @@ export class OnboardingService {
 
 
   async findById(userId: string) {
-  const user = await this.users.findOne({ where: { id: userId } });
+  const user = await this.users.findOne({
+    where: { id: userId },
+    relations: [
+      'wallets',
+      'transactions',
+      'bankAccounts', 
+    ],
+  });
   if (!user) throw new RpcException({ message: 'User not found', statusCode: 404 });
   return user;
 }

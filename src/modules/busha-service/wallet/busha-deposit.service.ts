@@ -6,6 +6,8 @@ import { RubiesService } from '@/modules/rubies/rubies.service';
 import { RubiesTransferDto } from '@/modules/rubies/dto/rubies-transfer.dto';
 import { OnboardingService } from '@/modules/onboarding/onboarding.service';
 import { RubiesBankMapperService } from '@/modules/rubies/ rubies-bank-mapper.service';
+import { BankDetail } from '@/entities/bank-detail.entity';
+import { User } from '@/entities/user.entity';
 
 
 @Injectable()
@@ -15,6 +17,10 @@ export class BushaDepositService {
   constructor(
     @InjectRepository(CryptoTransaction)
     private readonly depositRepo: Repository<CryptoTransaction>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
+    @InjectRepository(BankDetail)
+    private readonly bankRepo: Repository<BankDetail>,
     private readonly rubiesService: RubiesService,
     private readonly onboardingService: OnboardingService,
     private readonly rubiesBankMapperService: RubiesBankMapperService,
@@ -22,13 +28,15 @@ export class BushaDepositService {
 
 async updateStatusFromBushaWebhook(payload: any) {
     const { id: transferId, status, quote_id } = payload;
-    const deposit = await this.depositRepo.findOne({ where: { transfer_id: transferId } });
+    const deposit = await this.depositRepo.findOne({ where: { transfer_id: transferId }, relations: ['bank'] });
 
     if (!deposit) {
       this.logger.warn(` Deposit not found for transfer ${transferId}`);
       return;
     }
     const user = await this.onboardingService.findById(deposit.user_id)
+
+    
 
     // Map Busha status → internal status
     let internalStatus: CryptoTransactionStatus = CryptoTransactionStatus.PENDING;
@@ -47,37 +55,24 @@ async updateStatusFromBushaWebhook(payload: any) {
 
     }
 
-   const rubiesBankDetails =  await this.rubiesBankMapperService.getRubiesBankCode(user.bankCode)
 
       if (internalStatus === CryptoTransactionStatus.SUCCESSFUL) {
 
-        //  const transferDto: RubiesTransferDto = {
-        //   amount: Number(deposit.convertedAmount),
-        //   bankCode: '090175',
-        //   bankName: 'Rubies MFB',
-        //   creditAccountName: `${user.firstName} ${user.lastName}` , 
-        //   creditAccountNumber: '1000000267',
-        //   debitAccountName: 'Gooddeeds Technology Enterprise LTD', 
-        //   debitAccountNumber: '1000000595',         
-        //   narration: `Crypto Sale Payout for ${deposit.user_id}`,
-        //   reference: `REF-${Date.now()}-${deposit.id}`,
-        //   sessionId: Date.now().toString(),
-        // };
-
-        // console.log(transferDto)
 
        const transferDto: RubiesTransferDto = {
           amount: Number(deposit.convertedAmount),
-          bankCode: rubiesBankDetails.rubiesCode,
-          bankName: rubiesBankDetails.rubiesName,
+          bankCode: deposit.bank.bankCode,
+          bankName: deposit.bank.bankName,
           creditAccountName: `${user.firstName} ${user.lastName}` , 
-          creditAccountNumber: user.bankAccountNo,
+          creditAccountNumber: deposit.bank.accountNumber,
           debitAccountName: 'Gooddeeds Technology Enterprise LTD', 
           debitAccountNumber: '1000001179',         
           narration: `Payout From Gooddeeds Tech LTD}`,
           reference: `REF-${Date.now()}-${deposit.id}`,
           sessionId: Date.now().toString(),
         };
+       user.rewardPoint = (Number(user.rewardPoint) + 1).toString()
+       await this.usersRepo.save(user);
 
   // 🚀 Trigger Rubies transfer
   const fundTransfer = await this.rubiesService.fundTransfer(transferDto);
@@ -118,7 +113,7 @@ async updateStatusFromBushaWebhook(payload: any) {
     const deposits = await query.getMany();
 
     if (!deposits.length) {
-      this.logger.warn(`⚠ No deposits found for user ${userId}`);
+      this.logger.warn(` No deposits found for user ${userId}`);
     }
 
     return deposits;

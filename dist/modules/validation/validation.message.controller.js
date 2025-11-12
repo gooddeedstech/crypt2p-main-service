@@ -19,7 +19,6 @@ const microservices_1 = require("@nestjs/microservices");
 const validation_service_1 = require("./validation.service");
 const verify_account_dto_1 = require("./dtos/verify-account.dto");
 const verify_bank_dto_1 = require("./dtos/verify-bank.dto");
-const verify_bvn_dto_1 = require("./dtos/verify-bvn.dto");
 let ValidationMessageController = ValidationMessageController_1 = class ValidationMessageController {
     constructor(service) {
         this.service = service;
@@ -48,23 +47,6 @@ let ValidationMessageController = ValidationMessageController_1 = class Validati
             throw new common_1.InternalServerErrorException(err?.message || 'Account verification failed');
         }
     }
-    async verifyBVN(dto) {
-        this.logger.log(`➡️ Verifying BVN → ${dto.bvn}, Account: ${dto.account_number}, Bank: ${dto.bank_code}`);
-        if (!dto.bvn || !dto.account_number || !dto.bank_code || !dto.first_name || !dto.last_name) {
-            throw new common_1.BadRequestException('bvn, accountNumber, bankCode, firstName & lastName are required');
-        }
-        try {
-            // ✅ Passing null for actor for now
-            return await this.service.verifyBVNWithAccount(dto);
-        }
-        catch (err) {
-            this.logger.error('[bvn.verify] Error', err);
-            throw new common_1.InternalServerErrorException(err?.message || 'BVN verification failed');
-        }
-    }
-    processWebhook(payload) {
-        return this.service.processPaystackWebhook(payload);
-    }
 };
 exports.ValidationMessageController = ValidationMessageController;
 __decorate([
@@ -81,20 +63,6 @@ __decorate([
     __metadata("design:paramtypes", [verify_account_dto_1.VerifyAccountDto]),
     __metadata("design:returntype", Promise)
 ], ValidationMessageController.prototype, "verifyAccount", null);
-__decorate([
-    (0, microservices_1.MessagePattern)({ cmd: 'bvn.verify' }),
-    __param(0, (0, microservices_1.Payload)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_bvn_dto_1.VerifyBvnDto]),
-    __metadata("design:returntype", Promise)
-], ValidationMessageController.prototype, "verifyBVN", null);
-__decorate([
-    (0, microservices_1.MessagePattern)({ cmd: 'paystack.kyc.webhook' }),
-    __param(0, (0, microservices_1.Payload)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
-], ValidationMessageController.prototype, "processWebhook", null);
 exports.ValidationMessageController = ValidationMessageController = ValidationMessageController_1 = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [validation_service_1.ValidationService])
