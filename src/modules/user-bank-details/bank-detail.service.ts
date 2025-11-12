@@ -26,7 +26,7 @@ export class BankDetailService {
     isPrimary = false,
   ) {
     try {
-      const existing = await this.bankRepo.findOne({ where: { userId, accountNumber } });
+      const existing = await this.bankRepo.findOne({ where: { userId, accountNumber, bankCode } });
       if (existing) {
         throw new RpcException({
           statusCode: 400,
