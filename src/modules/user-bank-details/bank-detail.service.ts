@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BankDetail } from '@/entities/bank-detail.entity';
 import { RpcException } from '@nestjs/microservices';
+import { User } from '@/entities/user.entity';
 
 @Injectable()
 export class BankDetailService {
@@ -11,6 +12,8 @@ export class BankDetailService {
   constructor(
     @InjectRepository(BankDetail)
     private readonly bankRepo: Repository<BankDetail>,
+     @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   // ✅ CREATE BANK DETAIL
@@ -33,14 +36,17 @@ export class BankDetailService {
 
       if (isPrimary) await this.bankRepo.update({ userId }, { isPrimary: false });
 
-      const detail = this.bankRepo.create({
-        userId,
-        bankName,
-        bankCode,
-        accountNumber,
-        accountName,
-        isPrimary,
-      });
+      const user = await this.userRepo.findOne({ where: { id: userId } });
+
+const detail = this.bankRepo.create({
+  userId,
+  user, // full object
+  bankName,
+  bankCode,
+  accountNumber,
+  accountName,
+  isPrimary,
+});
 
       await this.bankRepo.save(detail);
       this.logger.log(`🏦 Bank added for user ${userId}: ${bankName} - ${accountNumber}`);
