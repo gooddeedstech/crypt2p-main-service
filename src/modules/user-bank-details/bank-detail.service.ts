@@ -50,7 +50,11 @@ const detail = this.bankRepo.create({
 
       await this.bankRepo.save(detail);
       this.logger.log(`🏦 Bank added for user ${userId}: ${bankName} - ${accountNumber}`);
-      return { message: 'Bank detail added successfully', data: detail };
+      return {
+  statusCode: 200,
+  message: 'Bank detail added successfully',
+  data: detail,
+};
     } catch (error: any) {
       this.logger.error(`❌ createBankDetail error: ${error.message}`);
       throw new RpcException({
