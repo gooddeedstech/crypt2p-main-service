@@ -139,6 +139,11 @@ export class OnboardingService {
   try {
     const user = await this.users.findOne({
       where: { email: dto.email, deletedAt: IsNull() },
+       relations: [
+      'wallets',
+      'transactions',
+      'bankAccounts', 
+    ],
     });
 
     if (!user) {
