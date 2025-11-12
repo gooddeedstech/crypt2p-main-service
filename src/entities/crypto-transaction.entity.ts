@@ -34,7 +34,7 @@ export class CryptoTransaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   user_id: string;
 
   @ManyToOne(() => User, (user) => user.transactions, { onDelete: 'CASCADE' })
