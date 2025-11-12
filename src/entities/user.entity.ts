@@ -108,14 +108,14 @@ export class User {
   bvnLastCheckedAt?: Date | null;
 
   // ✅ Wallet + Financial Records
-  @OneToMany(() => BankDetail, (b) => b.user)
-  bankAccounts: BankDetail[];
+  @OneToMany(() => CryptoTransaction, (tx) => tx.user)
+transactions: CryptoTransaction[];
 
-  @OneToMany(() => UserWallet, (w) => w.user)
-  wallets: UserWallet[];
+@OneToMany(() => BankDetail, (b) => b.user)
+bankAccounts: BankDetail[];
 
-  @OneToMany(() => CryptoTransaction, (d) => d.user_id)
-  transactions: CryptoTransaction[];
+@OneToMany(() => UserWallet, (w) => w.user)
+wallets: UserWallet[];
 
   @OneToMany(() => LoginLog, (log) => log.user)
   loginLogs: LoginLog[];

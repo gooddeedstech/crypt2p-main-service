@@ -50,23 +50,25 @@ export class RubiesKYCService {
       const data = response.data;
       this.logger.log(`✅ BVN Validation successful for ${dto.bvn}`);
       console.log(data)
+
+      console.log(dto.reference)
       const user = await this.onboardingService.findById(dto.reference)
-     
+      
 
       if(data.responseCode == '00'){
         user.firstName = data.firstname,
         user.lastName = data.lastname,
-    user.bvnStatus = BvnStatus.VERIFIED;
-    user.kycLevel = KycLevel.BASIC;
-    user.bvnLastCheckedAt = new Date();
-    await this.usersRepo.save(user);
-    await this.audit.write({
-      actorId: user.id,
-      actorType: ActorType.USER,
-      action: 'BVN_VERIFY_SUCCESS',
-      targetId: dto.bvn,
-      responseData: { data },
-    });
+        user.bvnStatus = BvnStatus.VERIFIED;
+        user.kycLevel = KycLevel.BASIC;
+        user.bvnLastCheckedAt = new Date();
+        await this.usersRepo.save(user);
+        await this.audit.write({
+          actorId: user.id,
+          actorType: ActorType.USER,
+          action: 'BVN_VERIFY_SUCCESS',
+          targetId: dto.bvn,
+          responseData: { data },
+        });
 
     await this.emailService.sendBvnVerificationResult(user.email, true)
 
