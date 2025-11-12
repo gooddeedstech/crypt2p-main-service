@@ -93,7 +93,10 @@ export class RubiesKYCService {
       return {
         success: true,
         message: data?.responseMessage || 'BVN validated successfully',
-        data,
+        data: {
+          ...user,
+          ...data
+        },
       };
     } catch (error: any) {
       const errMsg =
