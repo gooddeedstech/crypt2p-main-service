@@ -26,7 +26,7 @@ export class UserWalletService {
     try {
       // Prevent duplicate wallet for same asset + network
       const existing = await this.walletRepo.findOne({
-        where: { userId, asset, network },
+        where: { userId, asset, network, address },
       });
 
       if (existing) {
