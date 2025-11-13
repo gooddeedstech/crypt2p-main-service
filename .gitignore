@@ -15,7 +15,7 @@ pnpm-debug.log*
 *.env
 *.local.env
 
-firebase-service-account.json
+
 
 # OS files
 .DS_Store
