@@ -165,4 +165,102 @@ export class UserDeviceService {
       });
     }
   }
+
+   /* -----------------------------------------------------
+   📱 FIND ALL DEVICES (with pagination + filters)
+------------------------------------------------------ */
+async findAllDevices(options: {
+  page?: number;
+  limit?: number;
+  type?: DeviceType;
+  status?: DeviceStatus;
+}) {
+  const page = options.page || 1;
+  const limit = options.limit || 20;
+  const skip = (page - 1) * limit;
+
+  const where: any = {};
+  if (options.type) where.deviceType = options.type;
+  if (options.status) where.status = options.status;
+
+  const [data, total] = await this.deviceRepo.findAndCount({
+    where,
+    order: { createdAt: 'DESC' },
+    skip,
+    take: limit,
+    relations: ['user'],
+  });
+
+  return {
+    total,
+    page,
+    limit,
+    data,
+  };
+}
+
+/* -----------------------------------------------------
+   📊 DEVICES COUNT GROUPED BY DEVICE TYPE
+------------------------------------------------------ */
+async getDeviceCountByType() {
+  const result = await this.deviceRepo
+    .createQueryBuilder('d')
+    .select('d.deviceType', 'type')
+    .addSelect('COUNT(d.id)', 'count')
+    .groupBy('d.deviceType')
+    .orderBy('count', 'DESC')
+    .getRawMany();
+
+  return result.map((r) => ({
+    type: r.type,
+    count: Number(r.count),
+  }));
+}
+
+/* -----------------------------------------------------
+   📈 DAILY DEVICE REGISTRATION (last N days)
+------------------------------------------------------ */
+async getDailyDeviceRegistrations(days = 30) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const result = await this.deviceRepo
+    .createQueryBuilder('d')
+    .select("TO_CHAR(DATE_TRUNC('day', d.created_at), 'YYYY-MM-DD')", 'date')
+    .addSelect('d.deviceType', 'deviceType')
+    .addSelect('COUNT(d.id)', 'count')
+    .where('d.created_at >= :startDate', { startDate })
+    .groupBy('1')
+    .addGroupBy('2')
+    .orderBy('1', 'ASC')
+    .addOrderBy('2', 'ASC')
+    .getRawMany();
+
+  // Grouping into chart-friendly format
+  const grouped: Record<string, any> = {};
+
+  for (const r of result) {
+    const { date, deviceType, count } = r;
+    if (!grouped[date]) grouped[date] = {};
+    grouped[date][deviceType] = Number(count);
+  }
+
+  // Prepare final dataset
+  const dates = Object.keys(grouped).sort();
+  const types = [...new Set(result.map((r) => r.deviceType))];
+
+  const dataset = dates.map((date) => {
+    const row: any = { date };
+    types.forEach((t) => {
+      row[t] = grouped[date][t] ?? 0;
+    });
+    return row;
+  });
+
+  return {
+    deviceTypes: types,
+    days: dates,
+    dataset,
+  };
+}
 }

@@ -62,4 +62,20 @@ export class UserDeviceMessageController {
   async handleRemoveAll(@Payload() payload: { userId: string }) {
     return await this.deviceService.removeAllDevicesForUser(payload.userId);
   }
+
+
+  @MessagePattern({ cmd: 'devices.list' })
+  async listDevices(@Payload() payload: any) {
+    return this.deviceService.findAllDevices(payload);
+  }
+
+  @MessagePattern({ cmd: 'devices.by-type' })
+  async devicesByType() {
+    return this.deviceService.getDeviceCountByType();
+  }
+
+  @MessagePattern({ cmd: 'devices.daily' })
+  async dailyDevices(@Payload() payload: { days?: number }) {
+    return this.deviceService.getDailyDeviceRegistrations(payload?.days || 30);
+  }
 }
