@@ -56,7 +56,7 @@ export class UserDeviceMessageController {
   async handleDeactivateDevice(@Payload() payload: { fcmToken: string }) {
     return await this.deviceService.deactivateDevice(payload.fcmToken);
   }
-
+ 
   /** ✅ Remove all devices for user */
   @MessagePattern({ cmd: 'device.remove.all' })
   async handleRemoveAll(@Payload() payload: { userId: string }) {

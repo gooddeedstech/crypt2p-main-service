@@ -10,6 +10,7 @@ import { UserDeviceService } from './user-devices/user-device.service';
 import { join } from 'path';
 import { SendBulkNotificationDto, SendNotificationBulkDto } from './dto/send-bulk-notification.dto';
 import { User } from '@/entities/user.entity';
+import { initializeFirebase } from '@/utils/firebase';
 
 
 @Injectable()
@@ -25,16 +26,7 @@ export class NotificationService {
     private readonly userDeviceService: UserDeviceService,
   ) {
     // Initialize Firebase if not already
-   if (!admin.apps.length) {
-      const serviceAccountPath = join(__dirname, '../../../firebase-service-account.json');
-      const serviceAccount = require(serviceAccountPath);
-
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-
-      this.logger.log('✅ Firebase Admin initialized successfully');
-    }
+      initializeFirebase(); 
   }
   
 
