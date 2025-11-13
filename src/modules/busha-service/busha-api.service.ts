@@ -196,10 +196,10 @@ const results = await Promise.all(
       usdSellPrice: usdAsset.sellPrice,
       ngnBuyPrice: exchange.buyPrice - Number(a.margin),
       ngnSellPrice: exchange.sellPrice - Number(a.margin),
-      minBuyValue: usdAsset.minBuy,
-      maxBuyValue: usdAsset.maxBuy,
-      minSellValue: usdAsset.minSell,
-      maxSellValue: usdAsset.maxSell
+      minBuyValue: Number(usdAsset.minBuy),
+      maxBuyValue: Number(usdAsset.maxBuy),
+      minSellValue: Number(usdAsset.minSell),
+      maxSellValue: Number(usdAsset.maxSell)
       // marginApplied: gain,
       // exchangeBase: baseAsset,
     };
