@@ -58,7 +58,7 @@ async listBuyPairs() {
 
   
 
-   const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
+const marginSetting = await this.systemConfigService.findBySetting('MARGIN');
 const isMarginEnabled = marginSetting?.status === ConfigStatus.ENABLED;
 const marginValue = Number(marginSetting?.ngnValue || 0);
 
@@ -194,8 +194,8 @@ const results = await Promise.all(
         })) || [],
       usdBuyPrice: usdAsset.buyPrice,
       usdSellPrice: usdAsset.sellPrice,
-      ngnBuyPrice: exchange.buyPrice,
-      ngnSellPrice: exchange.sellPrice,
+      ngnBuyPrice: exchange.buyPrice + Number(a.margin),
+      ngnSellPrice: exchange.sellPrice + Number(a.margin),
       minBuyValue: usdAsset.minBuy,
       maxBuyValue: usdAsset.maxBuy,
       minSellValue: usdAsset.minSell,

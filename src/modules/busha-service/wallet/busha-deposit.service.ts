@@ -92,7 +92,7 @@ async updateStatusFromBushaWebhook(payload: any) {
        }
         
        await this.ledgerService.debit(debit)
-this.logger.log(`✅Transaction Ledger updated → ${internalStatus}`);
+     this.logger.log(`✅Transaction Ledger updated → ${internalStatus}`);
 
         deposit.exchange_status = ExchangeTransactionStatus.SUCCESSFUL,
         deposit.exchange_confirmed_at = new Date()
