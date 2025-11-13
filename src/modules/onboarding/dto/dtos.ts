@@ -10,7 +10,7 @@ import {
   Length,
   Matches,
 } from 'class-validator';
-import { Gender } from '@/entities/user.entity';
+import { BvnStatus, Gender, KycLevel } from '@/entities/user.entity';
 
 /* ---------------------------------------------
  ✅ REGISTER
@@ -200,4 +200,40 @@ export class ResendEmailDto {
   @ApiProperty({ example: 'john.doe@example.com' })
   @IsEmail()
   email: string;
+}
+
+export class UserResponseDto {
+  @ApiProperty() id: string;
+  @ApiProperty() email: string;
+  @ApiProperty() firstName: string;
+  @ApiProperty() lastName: string;
+  @ApiProperty() gender: Gender;
+  @ApiProperty() phoneNumber: string;
+
+  @ApiProperty() rewardPoint: string | null;
+  @ApiProperty() kycLevel: KycLevel;
+  @ApiProperty() bvnStatus: BvnStatus;
+  @ApiProperty() isDisabled: boolean;
+  @ApiProperty() isDeleted: boolean;
+
+  @ApiProperty({ type: () => [Object] }) wallets: any[];
+  @ApiProperty({ type: () => [Object] }) bankAccounts: any[];
+  @ApiProperty({ type: () => [Object] }) transactions: any[];
+
+  @ApiProperty() createdAt: Date;
+  @ApiProperty() lastLoginAt: Date | null;
+}
+
+export class QueryUsersDto {
+  @ApiPropertyOptional() page?: number = 1;
+  @ApiPropertyOptional() limit?: number = 20;
+
+  @ApiPropertyOptional() search?: string; // email, phone, name
+  @ApiPropertyOptional({ enum: KycLevel }) kycLevel?: KycLevel;
+  @ApiPropertyOptional() isDisabled?: boolean;
+  @ApiPropertyOptional() isDeleted?: boolean;
+  @ApiPropertyOptional({ enum: BvnStatus }) bvnStatus?: BvnStatus;
+
+  @ApiPropertyOptional() sort?: 'createdAt' | 'lastLoginAt';
+  @ApiPropertyOptional() order?: 'ASC' | 'DESC' = 'DESC';
 }

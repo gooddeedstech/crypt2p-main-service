@@ -3,7 +3,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -19,6 +19,7 @@ import {
   ConfirmResetDto,
   LoginDto,
   LoginPinDto,
+  QueryUsersDto,
   RegisterDto,
   StartResetDto,
 } from './dto/dtos';
@@ -137,6 +138,7 @@ export class OnboardingService {
   ---------------------------------------------------*/
  async loginPassword(dto: LoginDto) {
   try {
+
     const user = await this.users.findOne({
       where: { email: dto.email, deletedAt: IsNull() },
        relations: [
@@ -147,13 +149,6 @@ export class OnboardingService {
     });
 
     if (!user) {
-      await this.loginLogService.recordLogin(
-        dto.email, // no user ID since not found
-        LoginMethod.PASSWORD,
-        LoginStatus.FAILED,
-        'Invalid login credentials',
-      );
-
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid login credentials',
@@ -264,13 +259,6 @@ async loginPin(dto: LoginPinDto) {
     });
 
     if (!user) {
-      await this.loginLogService.recordLogin(
-        dto.email,
-        LoginMethod.PIN,
-        LoginStatus.FAILED,
-        'Invalid login credentials',
-      );
-
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid login credentials',
@@ -350,6 +338,7 @@ async loginPin(dto: LoginPinDto) {
     user.pinLockedUntil = null;
     user.lastLoginAt = new Date();
     await this.users.save(user);
+ 
 
     await this.loginLogService.recordLogin(
       user.id,
@@ -615,6 +604,7 @@ async loginPin(dto: LoginPinDto) {
       'wallets',
       'transactions',
       'bankAccounts', 
+      'loginLogs',
     ],
   });
   if (!user) throw new RpcException({ message: 'User not found', statusCode: 404 });
@@ -642,5 +632,110 @@ async logout(userId: string) {
   }
 }
 
+async findAll() {
+  const users = await this.users.find({
+    relations: ['wallets', 'bankAccounts', 'transactions','loginLogs',],
+    order: { createdAt: 'DESC' },
+  });
+
+  return users.map((u) => this.formatUser(u));
+}
+
+async listUsers(query: QueryUsersDto) {
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    kycLevel,
+    isDisabled,
+    isDeleted,
+    bvnStatus,
+    sort = 'createdAt',
+    order = 'DESC',
+  } = query;
+
+  console.log(JSON.stringify(query))
+
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { email: Like(`%${search}%`) },
+      { phoneNumber: Like(`%${search}%`) },
+      { firstName: Like(`%${search}%`) },
+      { lastName: Like(`%${search}%`) },
+    ];
+  }
+
+  if (kycLevel !== undefined) where.kycLevel = kycLevel;
+  if (isDisabled !== undefined) where.isDisabled = isDisabled;
+  if (isDeleted !== undefined) where.isDeleted = isDeleted;
+  if (bvnStatus !== undefined) where.bvnStatus = bvnStatus;
+
+  const [data, total] = await this.users.findAndCount({
+    where,
+    take: limit,
+    skip: (page - 1) * limit,
+    order: { [sort]: order },
+    relations: ['wallets', 'bankAccounts', 'transactions'],
+  });
+
+  return {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+    data: data.map((u) => this.formatUser(u)),
+  };
+}
+
+async disableUser(userId: string, reason?: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user)
+      throw new RpcException({ message: 'User not found', statusCode: 404 });
+
+    user.isDisabled = true;
+    await this.users.save(user);
+
+    return {
+      message: 'User account disabled successfully',
+      reason: reason ?? null,
+    };
+  }
+
+  /* -----------------------------------------------------------
+   ✅ Enable User
+  ------------------------------------------------------------*/
+  async enableUser(userId: string) {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user)
+      throw new RpcException({ message: 'User not found', statusCode: 404 });
+
+    user.isDisabled = false;
+    await this.users.save(user);
+
+    return { message: 'User account enabled successfully' };
+  }
+
+
+  private formatUser(user: User) {
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: `${user.firstName} ${ user.lastName}` ,
+    gender: user.gender,
+    phoneNumber: user.phoneNumber,
+    rewardPoint: user.rewardPoint,
+    kycLevel: user.kycLevel,
+    isDisabled: user.isDisabled,
+    dateCreated: user.createdAt,
+
+    // relations
+    wallets: user.wallets ?? [],
+    bankAccounts: user.bankAccounts ?? [],
+    transactions: user.transactions ?? [],
+    loginLogs: user.loginLogs ?? [],
+  };
+}
   
 }

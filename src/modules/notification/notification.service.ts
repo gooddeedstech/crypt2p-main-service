@@ -7,6 +7,9 @@ import * as admin from 'firebase-admin';
 import { EmailService } from '../email-service/email.service';
 import { SendNotificationDto } from './dto/send-notification.dto';
 import { UserDeviceService } from './user-devices/user-device.service';
+import { join } from 'path';
+import { SendBulkNotificationDto, SendNotificationBulkDto } from './dto/send-bulk-notification.dto';
+import { User } from '@/entities/user.entity';
 
 
 @Injectable()
@@ -16,17 +19,24 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepo: Repository<Notification>,
+     @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly emailService: EmailService,
     private readonly userDeviceService: UserDeviceService,
   ) {
     // Initialize Firebase if not already
-    if (!admin.apps.length) {
+   if (!admin.apps.length) {
+      const serviceAccountPath = join(__dirname, '../../../firebase-service-account.json');
+      const serviceAccount = require(serviceAccountPath);
+
       admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.FCM_SERVICE_ACCOUNT!)),
+        credential: admin.credential.cert(serviceAccount),
       });
-      this.logger.log('✅ Firebase Admin initialized');
+
+      this.logger.log('✅ Firebase Admin initialized successfully');
     }
   }
+  
 
   /** 🔔 Send Notification (multi-channel) */
 async sendNotification(dto: SendNotificationDto) {
@@ -93,6 +103,93 @@ async sendNotification(dto: SendNotificationDto) {
     }
   }
 
+ async sendBulkNotification(dto: SendBulkNotificationDto) {
+  const { title, message, userIds, type, channel, data } = dto;
+
+  let targets = [];
+
+  // 1️⃣ If userIds provided → notify selected users
+  if (userIds && userIds.length > 0) {
+    targets = userIds;
+  } else {
+    // 2️⃣ Otherwise notify ALL users
+    const users = await this.userRepo.find({ select: ['id', 'email'] });
+    targets = users.map((u) => u.id);
+  }
+
+  // 3️⃣ Send notification to each user
+  await Promise.all(
+    targets.map((id) =>
+      this.sendNotification({
+        userId: id,
+        title,
+        message,
+        channel,
+        type,
+        data,
+      }),
+    ),
+  );
+
+  return {
+    message: `Notification broadcast sent to ${targets.length} users`,
+  };
+}
+
+// Utility to convert data to string format (FCM requirement)
+private stringifyData(data: Record<string, any>) {
+  return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]));
+}
+
+
+async findAdminNotifications(page: number, limit: number) {
+  const skip = (page - 1) * limit;
+
+  // Fetch ALL admin notifications (NOT paginated yet)
+  const all = await this.notificationRepo.find({
+    where: { type: NotificationType.ADMIN },
+    order: { createdAt: 'DESC' },
+  });
+  console.log(JSON.stringify(all))
+
+  // Group by (title + message)
+  const groupedMap = new Map<string, any>();
+
+  for (const n of all) {
+    const key = `${n.title}__${n.message}`; // grouping key
+
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, {
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        totalRecipients: 1,
+        channel: n.channel,
+        createdAt: n.createdAt,
+        data: n.data,
+      });
+    } else {
+      const existing = groupedMap.get(key);
+      existing.totalRecipients++;
+    }
+  }
+
+  // Convert map → array
+  const groupedList = Array.from(groupedMap.values());
+
+  // Sort by createdAt (descending)
+  groupedList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  // Pagination
+  const paginated = groupedList.slice(skip, skip + limit);
+
+  return {
+    total: groupedList.length,
+    page,
+    limit,
+    data: paginated,
+  };
+}
   /** 🧾 List user notifications */
   async getUserNotifications(userId: string) {
     const list = await this.notificationRepo.find({

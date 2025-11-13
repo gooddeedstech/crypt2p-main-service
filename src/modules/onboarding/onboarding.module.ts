@@ -20,16 +20,19 @@ import { UserWallet } from '@/entities/user-wallet.entity'
 import { UserDeviceMessageController } from '../notification/user-devices/user-device.message.controller'
 import { UserDeviceService } from '../notification/user-devices/user-device.service'
 import { UserDevice } from '@/entities/user-device.entity'
+import { NotificationMessageController } from '../notification/ notification.message.controller'
+import { NotificationService } from '../notification/notification.service'
+import { Notification } from '@/entities/notification.entity'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken, PasswordReset, EmailVerification, LoginLog, BankDetail, UserWallet, UserDevice]),
+    TypeOrmModule.forFeature([User, RefreshToken, PasswordReset, EmailVerification, LoginLog, BankDetail, UserWallet, UserDevice, Notification]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'changeme',
       signOptions: { expiresIn: process.env.JWT_EXPIRES || '1d' }
     })
   ],
-  controllers: [OnboardingMessageController, BankDetailMessageController, UserWalletMessageController, UserDeviceMessageController],
-  providers: [OnboardingService, EmailService, PaystackService, LoginLogService, BankDetailService, UserWalletService, UserDeviceService]
+  controllers: [OnboardingMessageController, BankDetailMessageController, UserWalletMessageController, UserDeviceMessageController, NotificationMessageController],
+  providers: [OnboardingService, EmailService, PaystackService, LoginLogService, BankDetailService, UserWalletService, UserDeviceService, NotificationService]
 })
 export class OnboardingModule {}

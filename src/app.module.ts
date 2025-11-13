@@ -25,6 +25,7 @@ import { PaystackService } from './modules/paystack/paystack.service';
 import { RubiesModule } from './modules/rubies/rubies.module';
 import { LoginLogService } from './modules/onboarding/login-log.service';
 import { LoginLog } from './entities/login-log.entity';
+import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { LoginLog } from './entities/login-log.entity';
     OnboardingModule,
     BushaAPIModule,
     RubiesModule,
+    AdminAuthModule,
   ],
 
   providers: [OnboardingService, EmailService, PaystackService, LoginLogService],

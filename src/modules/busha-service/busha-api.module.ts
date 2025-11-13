@@ -28,13 +28,16 @@ import { Fee } from '@/entities/fees.entity';
 import { BankDetail } from '@/entities/bank-detail.entity';
 import { LoginLogService } from '../onboarding/login-log.service';
 import { LoginLog } from '@/entities/login-log.entity';
+import { LedgerMessageController } from '../transaction-ledger/transaction-ledger.controller';
+import { LedgerService } from '../transaction-ledger/transaction-ledger.service';
+import { TransactionLedger } from '@/entities/transaction_ledger.entity';
 
  
 @Module({
-  imports: [TypeOrmModule.forFeature([ User, Fee, PasswordReset, LoginLog,  EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig, BankDetail]), HttpModule],
+  imports: [TypeOrmModule.forFeature([ User, Fee, TransactionLedger, PasswordReset, LoginLog,  EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig, BankDetail]), HttpModule],
   
-  providers: [BushaAPIService, JwtService, EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
-  controllers: [BushaAPIMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
+  providers: [BushaAPIService, JwtService,LedgerService,  EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  controllers: [BushaAPIMessageController, LedgerMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
   exports: [BushaAPIService],
 })
 export class BushaAPIModule {}

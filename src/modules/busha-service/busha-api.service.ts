@@ -188,7 +188,7 @@ const results = await Promise.all(
       code: a.code,
       description: a.description,
       networks:
-        a.networks?.map((n) => ({
+        a.networks?.map((n) => ({ 
           name: n.name,
           value: n.value,
         })) || [],

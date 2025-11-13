@@ -12,6 +12,7 @@ export enum NotificationType {
   TRANSACTION = 'TRANSACTION',
   SECURITY = 'SECURITY',
   KYC = 'KYC',
+  ADMIN = 'ADMIN',
 }
 
 export enum NotificationChannel {
@@ -41,7 +42,7 @@ export class Notification {
   @Column({ type: 'enum', enum: NotificationChannel, default: NotificationChannel.IN_APP })
   channel: NotificationChannel;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   title: string;
 
   @Column({ type: 'text', nullable: true })

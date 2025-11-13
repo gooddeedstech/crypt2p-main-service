@@ -127,6 +127,9 @@ wallets: UserWallet[];
   @Column({ default: false })
   isDisabled: boolean;
 
+   @Column({ default: false })
+  isDeleted: boolean;
+
   @Column({ default: 0 })
   failedPinAttempts: number;
 

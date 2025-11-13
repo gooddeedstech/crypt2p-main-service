@@ -127,6 +127,10 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "bvnLastCheckedAt", void 0);
 __decorate([
+    (0, typeorm_1.OneToMany)(() => crypto_transaction_entity_1.CryptoTransaction, (tx) => tx.user),
+    __metadata("design:type", Array)
+], User.prototype, "transactions", void 0);
+__decorate([
     (0, typeorm_1.OneToMany)(() => bank_detail_entity_1.BankDetail, (b) => b.user),
     __metadata("design:type", Array)
 ], User.prototype, "bankAccounts", void 0);
@@ -134,10 +138,6 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => user_wallet_entity_1.UserWallet, (w) => w.user),
     __metadata("design:type", Array)
 ], User.prototype, "wallets", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => crypto_transaction_entity_1.CryptoTransaction, (d) => d.user_id),
-    __metadata("design:type", Array)
-], User.prototype, "transactions", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => login_log_entity_1.LoginLog, (log) => log.user),
     __metadata("design:type", Array)
@@ -150,6 +150,10 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], User.prototype, "isDisabled", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isDeleted", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)

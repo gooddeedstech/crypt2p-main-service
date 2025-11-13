@@ -8,6 +8,7 @@ import {
   ConfirmResetDto,
   StartResetDto,
   ChangePasswordDto,
+  QueryUsersDto,
 } from './dto/dtos';
 import { ChangePinDto, UpdateProfileDto } from './dto/user-update.dto';
 
@@ -42,6 +43,7 @@ export class OnboardingMessageController {
 
   @MessagePattern({ cmd: 'onboarding.login.pin' })
   loginPin(@Payload() dto: LoginPinDto) {
+    
     return this.svc.loginPin(dto);
   }
 
@@ -81,9 +83,30 @@ export class OnboardingMessageController {
     return this.svc.findById(payload.userId);
   }
 
+   @MessagePattern({ cmd: 'users.list' })
+  async listUsers(@Payload() query: QueryUsersDto) {
+    return this.svc.listUsers(query);
+  }
+
    @MessagePattern({ cmd: 'onboarding.logout' })
   async handleLogout(@Payload() payload: { userId: string }) {
       return await this.svc.logout(payload.userId);
  
+  }
+
+   @MessagePattern({ cmd: 'user.find-all' })
+  findAll() {
+    return this.svc.findAll();
+  }
+
+
+  @MessagePattern({ cmd: 'user.disable' })
+  disableUser(@Payload() payload: { userId: string; reason?: string }) {
+    return this.svc.disableUser(payload.userId, payload.reason);
+  }
+
+  @MessagePattern({ cmd: 'user.enable' })
+  enableUser(@Payload() payload: { userId: string }) {
+    return this.svc.enableUser(payload.userId);
   }
 }

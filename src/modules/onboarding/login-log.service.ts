@@ -20,6 +20,7 @@ export class LoginLogService {
     failure_reason?: string,
   ) {
     try {
+   
       const log = this.logRepo.create({
         user_id,
         method,

@@ -8,6 +8,7 @@ import { OnboardingService } from '@/modules/onboarding/onboarding.service';
 import { RubiesBankMapperService } from '@/modules/rubies/ rubies-bank-mapper.service';
 import { BankDetail } from '@/entities/bank-detail.entity';
 import { User } from '@/entities/user.entity';
+import { LedgerService } from '@/modules/transaction-ledger/transaction-ledger.service';
 
 
 @Injectable()
@@ -24,6 +25,7 @@ export class BushaDepositService {
     private readonly rubiesService: RubiesService,
     private readonly onboardingService: OnboardingService,
     private readonly rubiesBankMapperService: RubiesBankMapperService,
+    private readonly ledgerService: LedgerService,
   ) {}
 
 async updateStatusFromBushaWebhook(payload: any) {
@@ -74,12 +76,24 @@ async updateStatusFromBushaWebhook(payload: any) {
        user.rewardPoint = (Number(user.rewardPoint) + 1).toString()
        await this.usersRepo.save(user);
 
+       
   // 🚀 Trigger Rubies transfer
   const fundTransfer = await this.rubiesService.fundTransfer(transferDto);
 
   console.log(fundTransfer)
 
        if(fundTransfer.responseCode == '00'){
+        // Debit Transaction Ledger Account
+       const desc = `Payout for ${deposit.amount}${deposit.asset} @ ${deposit.exchangeRate}`
+       const debit = {
+        userId: deposit.user_id, 
+        description: desc,
+        amount: deposit.convertedAmount
+       }
+        
+       await this.ledgerService.debit(debit)
+this.logger.log(`✅Transaction Ledger updated → ${internalStatus}`);
+
         deposit.exchange_status = ExchangeTransactionStatus.SUCCESSFUL,
         deposit.exchange_confirmed_at = new Date()
        }else{
