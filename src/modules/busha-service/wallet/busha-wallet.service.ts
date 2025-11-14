@@ -7,6 +7,7 @@ import { CryptoTransaction, CryptoTransactionStatus, CryptoTransactionType } fro
 import { Repository } from 'typeorm';
 import { BushaAPIService } from '../busha-api.service';
 import { User } from '@/entities/user.entity';
+import { BankDetail } from '@/entities/bank-detail.entity';
 
 @Injectable()
 export class BushaWalletService {
@@ -18,8 +19,8 @@ export class BushaWalletService {
     private readonly http: HttpService,
     @InjectRepository(CryptoTransaction)
     private readonly deposits: Repository<CryptoTransaction>,
-     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+     @InjectRepository(BankDetail)
+    private readonly bankRepo: Repository<BankDetail>,
     private readonly bushaAPIService: BushaAPIService,
 ) {}
 
@@ -121,8 +122,8 @@ let bank_id
         bank_id = bankId
       }
       else{
-        const bank = await this.userRepo.findOne({
-        where: { id: userId }
+        const bank = await this.bankRepo.findOne({
+        where: { userId: userId }
       })
           bank_id  = bank.id;
       }
