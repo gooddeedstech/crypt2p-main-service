@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CryptoTransaction, CryptoTransactionStatus, CryptoTransactionType } from '@/entities/crypto-transaction.entity';
 import { Repository } from 'typeorm';
 import { BushaAPIService } from '../busha-api.service';
+import { User } from '@/entities/user.entity';
 
 @Injectable()
 export class BushaWalletService {
@@ -17,6 +18,8 @@ export class BushaWalletService {
     private readonly http: HttpService,
     @InjectRepository(CryptoTransaction)
     private readonly deposits: Repository<CryptoTransaction>,
+     @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly bushaAPIService: BushaAPIService,
 ) {}
 
@@ -113,8 +116,17 @@ export class BushaWalletService {
 
      
       const rate = pair[0].ngnBuyPrice; 
+let bank_id
+      if(bankId){
+        bank_id = bankId
+      }
+      else{
+        const bank = await this.userRepo.findOne({
+        where: { id: userId }
+      })
+          bank_id  = bank.id;
+      }
 
-     
      const numericAmount = Number(amount);
     const numericRate = Number(rate);
     let convertedAmount = 0
@@ -147,7 +159,7 @@ export class BushaWalletService {
       convertedAmount: convertedAmount,
       quote_id: quote.id,
       transfer_id: transfer.transferId,
-      bank_id: bankId,
+      bank_id: bank_id,
       address: transfer.address,
       expires_at: transfer.expiresAt,
       status: CryptoTransactionStatus.PENDING,
