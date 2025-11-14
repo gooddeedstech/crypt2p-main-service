@@ -64,74 +64,76 @@ export class OnboardingService {
   /* --------------------------------------------------
    ✅ REGISTER USER
   ---------------------------------------------------*/
-  async register(dto: RegisterDto) {
-    try {
-      const emailExists = await this.users.findOne({
-        where: { email: dto.email },
-      });
+ async register(dto: RegisterDto) {
+  try {
+    const emailExists = await this.users.findOne({ where: { email: dto.email } });
 
-      const verified = await this.verifications.findOne({
-        where: { email: dto.email, used: true },
-        order: { createdAt: 'DESC' },
-      });
+    const verified = await this.verifications.findOne({
+      where: { email: dto.email, used: true },
+      order: { createdAt: 'DESC' },
+    });
 
-      if (!verified) {
-        throw new RpcException({
-          statusCode: 403,
-          message: 'Please verify your email first',
-        });
-      }
-
-      if (emailExists) {
-        throw new RpcException({
-          statusCode: 400,
-          message: 'Email already exists',
-        });
-      }
-
-      const phoneExists = await this.users.findOne({
-        where: { phoneNumber: dto.phoneNumber },
-      });
-
-      if (phoneExists) {
-        throw new RpcException({
-          statusCode: 400,
-          message: 'Phone number already exists',
-        });
-      }
-
-
-
-      const user = this.users.create({
-        email: dto.email,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phoneNumber: dto.phoneNumber,
-        passwordHash: await this.hash(dto.password),
-        country: dto.country,
-        dob: dto.dob ? new Date(dto.dob) : null,
-        gender: dto.gender ?? null,
-   
-      });
-
-      await this.users.save(user);
-
-      verified.used = true;
-      await this.verifications.save(verified);
-
-      return {
-        message: 'Account created successfully',
-        userId: user.id,
-       
-      };
-    } catch (error) {
-      this.logger.error('Register error:', error);
+    if (!verified) {
       throw new RpcException({
-        statusCode: 500,
-        message: 'Registration failed. Please try again.',
+        statusCode: 403,
+        message: 'Please verify your email first',
       });
     }
+
+    if (emailExists) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Email already exists',
+      });
+    }
+
+    const phoneExists = await this.users.findOne({
+      where: { phoneNumber: dto.phoneNumber },
+    });
+
+    if (phoneExists) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Phone number already exists',
+      });
+    }
+
+    const user = this.users.create({
+      email: dto.email,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phoneNumber: dto.phoneNumber,
+      passwordHash: await this.hash(dto.password),
+      country: dto.country,
+      dob: dto.dob ? new Date(dto.dob) : null,
+      gender: dto.gender ?? null,
+    });
+
+    await this.users.save(user);
+
+    verified.used = true;
+    await this.verifications.save(verified);
+
+    return {
+      message: 'Account created successfully',
+      userId: user.id,
+    };
+
+  } catch (error) {
+    this.logger.error('Register error:', error);
+
+    // 🔥 If the error is RpcException, return it EXACTLY as thrown
+    if (error instanceof RpcException) {
+      throw error;
+    }
+
+    // ❗ else return generic error
+    throw new RpcException({
+      statusCode: 500,
+      message: 'Registration failed. Please try again.',
+    });
   }
+}
 
   /* --------------------------------------------------
    ✅ LOGIN WITH EMAIL + PASSWORD
