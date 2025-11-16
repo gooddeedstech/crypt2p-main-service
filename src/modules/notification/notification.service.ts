@@ -32,68 +32,88 @@ export class NotificationService {
 
   /** 🔔 Send Notification (multi-channel) */
 async sendNotification(dto: SendNotificationDto) {
-    try {
-      const { userId, title, message, type, channel, data, email } = dto;
+  try {
+    const { userId, title, message, type, channel, data, email } = dto;
 
-      // ✅ Save notification in DB
-      const notif = this.notificationRepo.create({
-        userId,
-        title,
-        message,
-        type: type || NotificationType.SYSTEM,
-        channel: channel || NotificationChannel.ALL,
-        data,
-      });
-      await this.notificationRepo.save(notif);
+    // ---------------------------
+    // 1. Save Notification to DB
+    // ---------------------------
+    const notif = this.notificationRepo.create({
+      userId,
+      title,
+      message,
+      type: type ?? NotificationType.SYSTEM,
+      channel: channel ?? NotificationChannel.ALL,
+      data: data ?? null, // OPTIONAL
+    });
 
-      this.logger.log(`📨 Notification stored for user ${userId}: ${title}`);
+    await this.notificationRepo.save(notif);
+    this.logger.log(`📨 Notification saved for user ${userId}`);
 
-      // ✅ Send via FCM (if applicable)
-        if (channel === NotificationChannel.PUSH || channel === NotificationChannel.ALL) {
+    // ---------------------------
+    // 2. PUSH NOTIFICATION (FCM)
+    // ---------------------------
+    if (channel === NotificationChannel.PUSH || channel === NotificationChannel.ALL) {
       const devices = await this.userDeviceService.findDevicesByUser(userId);
 
-      if (devices && devices.length > 0) {
-        const pushPayloads = devices.map((device) => {
-          if (!device.fcmToken) return null;
-
-          return admin.messaging().send({
-            token: device.fcmToken,
-            notification: { title, body: message },
-            data: data
-              ? Object.fromEntries(
-                  Object.entries(data).map(([k, v]) => [k, String(v)]),
-                )
-              : {},
-          });
-        });
-
-        // Send all notifications concurrently
-        await Promise.all(pushPayloads);
-
-        this.logger.log(`📲 Push sent to ${devices.length} device(s) for user ${userId}`);
+      if (devices.length === 0) {
+        this.logger.warn(`⚠️ No devices registered for user ${userId}`);
       } else {
-        this.logger.warn(`⚠️ No registered devices found for user ${userId}`);
+        const pushPayloads = devices
+          .filter((d) => !!d.fcmToken)
+          .map((device) =>
+            admin.messaging().send({
+              token: device.fcmToken,
+              notification: {
+                title,
+                body: message,
+              },
+              // Only attach data if it exists
+              data: data ? this.normalizeFCMData(data) : {},
+            }),
+          );
+
+        await Promise.all(pushPayloads);
+        this.logger.log(`📲 Push notification sent to ${devices.length} devices`);
       }
     }
 
-      // ✅ Send via Email (if applicable)
-      if (
-        (channel === NotificationChannel.EMAIL || channel === NotificationChannel.ALL) &&
-        email
-      ) {
-        await this.emailService.sendGenericNotification(email, title, message);
-        this.logger.log(`📧 Email notification sent to ${email}`);
-      }
-
-      return { message: 'Notification sent successfully', data: notif };
-    } catch (error: any) {
-      this.logger.error(`❌ sendNotification error: ${error.message}`);
-      throw new RpcException({
-        statusCode: 500,
-        message: 'Failed to send notification',
-      });
+    // ---------------------------
+    // 3. EMAIL NOTIFICATION
+    // ---------------------------
+    if (
+      email &&
+      (channel === NotificationChannel.EMAIL ||
+        channel === NotificationChannel.ALL)
+    ) {
+      await this.emailService.sendGenericNotification(email, title, message);
+      this.logger.log(`📧 Email sent to ${email}`);
     }
+
+    return { message: 'Notification sent successfully', data: notif };
+  } catch (error: any) {
+    this.logger.error(`❌ sendNotification error: ${error.message}`);
+
+    throw new RpcException({
+      statusCode: 500,
+      message: error.message || 'Failed to send notification',
+    });
   }
+}
+
+/**
+ * 🔧 Firebase requires all payload values to be string.
+ * This helper ensures safe conversion.
+ */
+private normalizeFCMData(data: Record<string, any>) {
+  try {
+    return Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [key, String(value)]),
+    );
+  } catch {
+    return {};
+  }
+}
 
  async sendBulkNotification(dto: SendBulkNotificationDto) {
   const { title, message, channel } = dto;
