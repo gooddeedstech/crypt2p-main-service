@@ -96,18 +96,15 @@ async sendNotification(dto: SendNotificationDto) {
   }
 
  async sendBulkNotification(dto: SendBulkNotificationDto) {
-  const { title, message, userIds, type, channel, data } = dto;
+  const { title, message, channel } = dto;
 
   let targets = [];
 
-  // 1️⃣ If userIds provided → notify selected users
-  if (userIds && userIds.length > 0) {
-    targets = userIds;
-  } else {
+ 
     // 2️⃣ Otherwise notify ALL users
     const users = await this.userRepo.find({ select: ['id', 'email'] });
     targets = users.map((u) => u.id);
-  }
+
 
   // 3️⃣ Send notification to each user
   await Promise.all(
@@ -117,8 +114,8 @@ async sendNotification(dto: SendNotificationDto) {
         title,
         message,
         channel,
-        type,
-        data,
+        type: NotificationType.ADMIN,
+
       }),
     ),
   );
