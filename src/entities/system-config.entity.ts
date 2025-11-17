@@ -19,11 +19,21 @@ export class SystemConfig {
   @Column({ unique: true })
   setting: string; // e.g. "ALLOW_WITHDRAWALS", "ENABLE_2FA"
 
-   @Column({ type: 'int', nullable: true })
-  ngnValue?: number; 
+ @Column({
+  type: 'decimal',
+  precision: 10,   // total digits
+  scale: 2,        // digits after decimal
+  nullable: true,
+})
+ngnValue?: number;
 
-     @Column({ type: 'int', nullable: true })
-  usdValue?: number; 
+@Column({
+  type: 'decimal',
+  precision: 10,
+  scale: 2,
+  nullable: true,
+})
+usdValue?: number;
 
   @Column({
     type: 'enum',

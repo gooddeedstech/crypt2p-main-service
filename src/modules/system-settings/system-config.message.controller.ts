@@ -2,18 +2,20 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { SystemConfigService } from './system-config.service';
 import { ConfigStatus } from '@/entities/system-config.entity';
+import { UpdateSystemConfigDto } from './dto/update-system-config.dto';
 
 @Controller()
 export class SystemConfigMessageController {
-  constructor(private readonly service: SystemConfigService) {}
+  constructor(private readonly systemConfigService: SystemConfigService) {}
 
-  @MessagePattern({ cmd: 'config.list' })
-  findAll() {
-    return this.service.findAll();
-  }
+// microservice controller
+@MessagePattern({ cmd: 'system-config:get-all' })
+async getAllConfigs() {
+  return this.systemConfigService.getAllConfigs();
+}
 
-  @MessagePattern({ cmd: 'config.update.status' })
-  updateStatus(@Payload() payload: { id: string; status: ConfigStatus }) {
-    return this.service.updateStatus(payload.id, payload.status);
-  }
+@MessagePattern({ cmd: 'system-config:update-all' })
+async updateAllConfigs(@Payload() dto: UpdateSystemConfigDto) {
+  return this.systemConfigService.updateAllConfigs(dto);
+}
 }

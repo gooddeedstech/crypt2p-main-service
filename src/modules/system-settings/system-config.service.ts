@@ -1,8 +1,9 @@
+import { SystemConfig } from '@/entities/system-config.entity';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SystemConfig, ConfigStatus } from '@/entities/system-config.entity';
-import { RpcException } from '@nestjs/microservices';
+import { UpdateSystemConfigDto } from './dto/update-system-config.dto';
+
 
 @Injectable()
 export class SystemConfigService {
@@ -11,27 +12,39 @@ export class SystemConfigService {
     private readonly configRepo: Repository<SystemConfig>,
   ) {}
 
-  /** 🔍 Get all system settings */
-  async findAll(): Promise<SystemConfig[]> {
-    return this.configRepo.find({
-      order: { setting: 'ASC' },
-    });
+  // ------------------------
+  // GET ALL CONFIG SETTINGS
+  // ------------------------
+  async getAllConfigs(): Promise<SystemConfig[]> {
+    return this.configRepo.find({ order: { setting: 'ASC' } });
   }
 
-  /** ⚙️ Update setting status */
-  async updateStatus(id: string, status: ConfigStatus): Promise<SystemConfig> {
-    const config = await this.configRepo.findOne({ where: { id } });
-    if (!config) {
-      throw new RpcException(new NotFoundException('Setting not found'));
+  // ------------------------
+  // UPDATE MULTIPLE SETTINGS
+  // ------------------------
+  async updateAllConfigs(dto: UpdateSystemConfigDto): Promise<string> {
+    for (const item of dto.configs) {
+      const config = await this.configRepo.findOne({ where: { id: item.id } });
+
+      if (!config) {
+        throw new NotFoundException(`Config with id ${item.id} not found`);
+      }
+
+      // Merge changes
+      Object.assign(config, item);
+
+      await this.configRepo.save(config);
     }
 
-    config.status = status;
-    await this.configRepo.save(config);
-    return config;
+    return 'System configuration updated successfully';
   }
 
-  /** 🔍 Find by setting name */
-  async findBySetting(setting: string): Promise<SystemConfig | null> {
-    return this.configRepo.findOne({ where: { setting } });
+   async findBySetting(setting: string): Promise<SystemConfig> {
+    const config = await this.configRepo.findOne({ where: { setting } });
+
+    if (!config) {
+      throw new NotFoundException(`Setting ${setting} not found`);
+    }
+    return config;
   }
 }
