@@ -257,6 +257,7 @@ async loginPin(dto: LoginPinDto) {
       'wallets',
       'transactions',
       'bankAccounts', 
+      'notification', 
     ],
     });
 

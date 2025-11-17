@@ -5,7 +5,9 @@ import {
   Index,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
+import { User } from './user.entity';
 
 export enum NotificationType {
   SYSTEM = 'SYSTEM',
@@ -33,7 +35,7 @@ export class Notification {
   id: string;
 
   @Index()
-  @Column()
+  @Column({ nullable: false })
   userId: string;
 
   @Column({ type: 'enum', enum: NotificationType })
@@ -53,6 +55,9 @@ export class Notification {
 
   @Column({ type: 'enum', enum: NotificationStatus, default: NotificationStatus.UNREAD })
   status: NotificationStatus;
+
+  @ManyToOne(() => User, (u) => u.notifications)
+  user: User;
 
   @CreateDateColumn()
   createdAt: Date;

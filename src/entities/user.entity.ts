@@ -15,6 +15,7 @@ import { BankDetail } from './bank-detail.entity';
 import { LoginLog } from './login-log.entity';
 import { UserWallet } from './user-wallet.entity';
 import { UserDevice } from './user-device.entity';
+import { Notification } from './notification.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -84,7 +85,7 @@ export class User {
   @Column({ unique: true, nullable: true })
   referralCode: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true }) 
   rewardPoint?: string;
 
   @BeforeInsert()
@@ -116,6 +117,9 @@ bankAccounts: BankDetail[];
 
 @OneToMany(() => UserWallet, (w) => w.user)
 wallets: UserWallet[];
+
+@OneToMany(() => Notification, (n) => n.user)
+notifications: Notification[];
 
   @OneToMany(() => LoginLog, (log) => log.user)
   loginLogs: LoginLog[];
