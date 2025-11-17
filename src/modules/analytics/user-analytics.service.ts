@@ -16,41 +16,89 @@ export class UserAnalyticsService {
   ) {}
 
   /* ✅ USER ANALYTICS SUMMARY */
-  async getUserSummary() {
-    const totalUsers = await this.userRepo.count();
-    const activeUsers = await this.userRepo.count({ where: { isDisabled: false } });
-    const deletedAccounts = await this.userRepo.count({ where: { isDeleted: true } });
+ async getUserSummary() {
+  const now = new Date();
 
-    const today = new Date();
-    const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-    const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+  // 📌 Today
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
 
-    const registeredToday = await this.userRepo.count({
-      where: { createdAt: Between(startOfToday, endOfToday) },
-    });
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+  // 📌 Yesterday
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
-    const registeredThisMonth = await this.userRepo.count({
-      where: { createdAt: Between(startOfMonth, new Date()) },
-    });
+  const endOfYesterday = new Date(startOfYesterday);
+  endOfYesterday.setHours(23, 59, 59, 999);
 
-    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-    const registeredThisYear = await this.userRepo.count({
-      where: { createdAt: Between(startOfYear, new Date()) },
-    });
+  // 📌 This Month
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = now;
 
-    return {
-      totalUsers,
-      activeUsers,
-      deletedAccounts,
-      registeredToday,
-      registeredThisMonth,
-      registeredThisYear,
-    };
-  }
+  // 📌 Last Month
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  // 📌 This Year
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  // 📌 Last Year
+  const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
+  const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31);
+
+  // -----------------------------------------------
+  // 🚀 COUNTS
+  // -----------------------------------------------
+  const totalUsers = await this.userRepo.count();
+  const activeUsers = await this.userRepo.count({ where: { isDisabled: false } });
+  const deletedAccounts = await this.userRepo.count({ where: { isDeleted: true } });
+
+  const registeredToday = await this.userRepo.count({
+    where: { createdAt: Between(startOfToday, endOfToday) },
+  });
+
+  const registeredYesterday = await this.userRepo.count({
+    where: { createdAt: Between(startOfYesterday, endOfYesterday) },
+  });
+
+  const registeredThisMonth = await this.userRepo.count({
+    where: { createdAt: Between(startOfMonth, endOfMonth) },
+  });
+
+  const registeredLastMonth = await this.userRepo.count({
+    where: { createdAt: Between(startOfLastMonth, endOfLastMonth) },
+  });
+
+  const registeredThisYear = await this.userRepo.count({
+    where: { createdAt: Between(startOfYear, now) },
+  });
+
+  const registeredLastYear = await this.userRepo.count({
+    where: { createdAt: Between(startOfLastYear, endOfLastYear) },
+  });
+
+  // -----------------------------------------------
+  // 📊 RETURN WITH PERCENTAGE CHANGE
+  // -----------------------------------------------
+  return {
+    totalUsers,
+    registeredToday,
+    registeredThisMonth,
+    registeredThisYear,
+    activeUsers,
+    deletedAccounts,
+
+    changes: {
+      registeredToday: this.calculateChange(registeredToday, registeredYesterday),
+      registeredThisMonth: this.calculateChange(registeredThisMonth, registeredLastMonth),
+      registeredThisYear: this.calculateChange(registeredThisYear, registeredLastYear),
+      totalUsers: this.calculateChange(totalUsers, totalUsers - registeredToday), // simplistic
+      activeUsers: this.calculateChange(activeUsers, activeUsers), // or track separately
+    },
+  };
+}
 
   /* 📈 USER REGISTRATION TREND (Last N Days) */
   async getDailyRegistrationStats(days: number) {
@@ -243,4 +291,24 @@ export class UserAnalyticsService {
 
     };
   }
+
+  private calculateChange(current: number, previous: number) {
+  if (previous === 0) {
+    return {
+      value: current > 0 ? 100 : 0,
+      direction: current > 0 ? 'up' : 'neutral',
+    };
+  }
+
+  const diff = current - previous;
+  const percent = (diff / previous) * 100;
+
+  return {
+    value: Math.abs(Number(percent.toFixed(2))),
+    direction:
+      diff > 0 ? 'up' :
+      diff < 0 ? 'down' :
+      'neutral',
+  };
+}
 }

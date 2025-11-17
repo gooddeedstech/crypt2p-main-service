@@ -656,29 +656,42 @@ async listUsers(query: QueryUsersDto) {
     order = 'DESC',
   } = query;
 
-  console.log(JSON.stringify(query))
+  console.log("QUERY:", JSON.stringify(query));
 
-  const where: any = {};
+  // -----------------------------------------
+  // 🔍 Base filters (AND conditions)
+  // -----------------------------------------
+  const baseWhere: any = {};
+
+  if (kycLevel !== undefined) baseWhere.kycLevel = kycLevel;
+  if (isDisabled !== undefined) baseWhere.isDisabled = isDisabled;
+  if (isDeleted !== undefined) baseWhere.isDeleted = isDeleted;
+  if (bvnStatus !== undefined) baseWhere.bvnStatus = bvnStatus;
+
+  // -----------------------------------------
+  // 🔍 Search (OR conditions)
+  // -----------------------------------------
+  let whereConditions: any[] = [];
 
   if (search) {
-    where.OR = [
-      { email: Like(`%${search}%`) },
-      { phoneNumber: Like(`%${search}%`) },
-      { firstName: Like(`%${search}%`) },
-      { lastName: Like(`%${search}%`) },
+    whereConditions = [
+      { ...baseWhere, email: Like(`%${search}%`) },
+      { ...baseWhere, phoneNumber: Like(`%${search}%`) },
+      { ...baseWhere, firstName: Like(`%${search}%`) },
+      { ...baseWhere, lastName: Like(`%${search}%`) },
     ];
+  } else {
+    whereConditions = [baseWhere];
   }
 
-  if (kycLevel !== undefined) where.kycLevel = kycLevel;
-  if (isDisabled !== undefined) where.isDisabled = isDisabled;
-  if (isDeleted !== undefined) where.isDeleted = isDeleted;
-  if (bvnStatus !== undefined) where.bvnStatus = bvnStatus;
-
+  // -----------------------------------------
+  // 🧾 Query DB with OR + AND + Pagination
+  // -----------------------------------------
   const [data, total] = await this.users.findAndCount({
-    where,
+    where: whereConditions,
     take: limit,
     skip: (page - 1) * limit,
-    order: { [sort]: order },
+    order: { [sort]: order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC' },
     relations: ['wallets', 'bankAccounts', 'transactions'],
   });
 

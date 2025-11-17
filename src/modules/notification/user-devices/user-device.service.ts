@@ -7,6 +7,7 @@ import {
   DeviceType,
   DeviceStatus,
 } from '@/entities/user-device.entity';
+import { User } from '@/entities/user.entity';
 
 @Injectable()
 export class UserDeviceService {
@@ -15,6 +16,8 @@ export class UserDeviceService {
   constructor(
     @InjectRepository(UserDevice)
     private readonly deviceRepo: Repository<UserDevice>,
+      @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   /* -----------------------------------------------------
@@ -39,6 +42,8 @@ export class UserDeviceService {
       // check if token already exists
       let device = await this.deviceRepo.findOne({ where: { fcmToken } });
 
+      const user = await this.userRepo.findOne({where: {id: userId}})
+
       if (device) {
         // Update existing record
         device.lastUsedAt = new Date();
@@ -60,6 +65,7 @@ export class UserDeviceService {
         status: DeviceStatus.ACTIVE,
         lastIp,
         lastUsedAt: new Date(),
+        user: user
       });
 
       await this.deviceRepo.save(device);

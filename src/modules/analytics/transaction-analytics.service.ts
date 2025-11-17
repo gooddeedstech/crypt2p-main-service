@@ -19,83 +19,130 @@ export class TransactionAnalyticsService {
   /* -----------------------------------------------------------
    🧮 DATE RANGE HELPER
   ------------------------------------------------------------*/
-  private buildDateRange(filter: string) {
-    const now = new Date();
-    const start = new Date();
+ private buildDateRange(filter?: 'today' | 'week' | 'month' | 'year') {
+  const now = new Date();
 
-    switch (filter) {
-      case 'today':
-        start.setHours(0, 0, 0, 0);
-        break;
+  if (!filter) return null;
 
-      case 'week':
-        start.setDate(now.getDate() - 7);
-        break;
+  let start: Date;
+  let prevStart: Date;
+  let prevEnd: Date;
 
-      case 'month':
-        start.setMonth(now.getMonth());
-        start.setDate(1);
-        break;
+  switch (filter) {
+    case 'today':
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
 
-      case 'year':
-        start.setFullYear(now.getFullYear(), 0, 1);
-        break;
+      prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 1);
 
-      default:
-        return null;
-    }
+      prevEnd = new Date(prevStart);
+      prevEnd.setHours(23, 59, 59, 999);
+      break;
 
-    return { start, end: now };
+    case 'week':
+      start = new Date(now);
+      start.setDate(start.getDate() - 7);
+
+      prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 7);
+
+      prevEnd = new Date(start);
+      prevEnd.setMilliseconds(prevEnd.getMilliseconds() - 1);
+      break;
+
+    case 'month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      prevEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      break;
+
+    case 'year':
+      start = new Date(now.getFullYear(), 0, 1);
+
+      prevStart = new Date(now.getFullYear() - 1, 0, 1);
+      prevEnd = new Date(now.getFullYear() - 1, 11, 31);
+      break;
   }
+
+  return {
+    start,
+    end: now,
+    prevStart,
+    prevEnd,
+  };
+}
 
   /* -----------------------------------------------------------
    📊 TRANSACTION SUMMARY (Dashboard)
   ------------------------------------------------------------*/
-  async getDashboardSummary(options: {
-    date?: 'today' | 'week' | 'month' | 'year';
-    type?: CryptoTransactionType;
-    asset?: string;
-  }) {
-    const { date, type, asset } = options;
+ async getDashboardSummary(options: {
+  date?: 'today' | 'week' | 'month' | 'year';
+  type?: CryptoTransactionType;
+  asset?: string;
+}) {
+  const { date, type, asset } = options;
+  const range = this.buildDateRange(date);
 
-    const where: any = {};
+  const where: any = {};
+  const wherePrev: any = {};
 
-    // Date filter
-    const range = this.buildDateRange(date);
-    if (range) where.created_at = Between(range.start, range.end);
+  // --- CURRENT RANGE ---
+  if (range) where.created_at = Between(range.start, range.end);
 
-    // Type filter
-    if (type) where.type = type;
-
-    // Asset filter
-    if (asset) where.asset = asset;
-
-    const total = await this.txRepo.count({ where });
-
-    const successful = await this.txRepo.count({
-      where: { ...where, status: CryptoTransactionStatus.SUCCESSFUL },
-    });
-
-    const pending = await this.txRepo.count({
-      where: { ...where, status: CryptoTransactionStatus.PENDING },
-    });
-
-    const failed = await this.txRepo.count({
-      where: { ...where, status: CryptoTransactionStatus.FAILED },
-    });
-
-    const cancelled = await this.txRepo.count({
-      where: { ...where, status: CryptoTransactionStatus.CANCELLED },
-    });
-
-    return {
-      total,
-      successful,
-      pending,
-      failed,
-      cancelled,
-    };
+  if (type) {
+    where.type = type;
+    wherePrev.type = type;
   }
+
+  if (asset) {
+    where.asset = asset;
+    wherePrev.asset = asset;
+  }
+
+  // --- PREVIOUS RANGE ---
+  if (range) {
+    wherePrev.created_at = Between(range.prevStart, range.prevEnd);
+  }
+
+  // -----------------------------
+  // CURRENT PERIOD COUNTS
+  // -----------------------------
+  const total = await this.txRepo.count({ where });
+  const successful = await this.txRepo.count({ where: { ...where, status: 'SUCCESSFUL' } });
+  const pending = await this.txRepo.count({ where: { ...where, status: 'PENDING' } });
+  const failed = await this.txRepo.count({ where: { ...where, status: 'FAILED' } });
+  const cancelled = await this.txRepo.count({ where: { ...where, status: 'CANCELLED' } });
+
+  // -----------------------------
+  // PREVIOUS PERIOD COUNTS
+  // -----------------------------
+  const prevTotal = await this.txRepo.count({ where: wherePrev });
+  const prevSuccessful = await this.txRepo.count({ where: { ...wherePrev, status: 'SUCCESSFUL' } });
+  const prevPending = await this.txRepo.count({ where: { ...wherePrev, status: 'PENDING' } });
+  const prevFailed = await this.txRepo.count({ where: { ...wherePrev, status: 'FAILED' } });
+  const prevCancelled = await this.txRepo.count({ where: { ...wherePrev, status: 'CANCELLED' } });
+
+  // -----------------------------
+  // RETURN RESULT WITH PERCENTAGE CHANGE
+  // -----------------------------
+  return {
+    total,
+    successful,
+    pending,
+    failed,
+    cancelled,
+
+    changes: {
+      total: this.calculateChange(total, prevTotal),
+      successful: this.calculateChange(successful, prevSuccessful),
+      pending: this.calculateChange(pending, prevPending),
+      failed: this.calculateChange(failed, prevFailed),
+      cancelled: this.calculateChange(cancelled, prevCancelled),
+    },
+  };
+}
 
   /* -----------------------------------------------------------
    🪙 TRANSACTION SUMMARY BY ASSET
@@ -221,6 +268,26 @@ async getSummaryByAsset(options: {
     limit,
     totalPages: Math.ceil(total / limit),
     data: formatted,
+  };
+}
+
+private calculateChange(current: number, previous: number) {
+  if (previous === 0) {
+    return {
+      value: current > 0 ? 100 : 0,
+      direction: current > 0 ? 'up' : 'neutral',
+    };
+  }
+
+  const diff = current - previous;
+  const percent = (diff / previous) * 100;
+
+  return {
+    value: Math.abs(Number(percent.toFixed(2))),
+    direction:
+      diff > 0 ? 'up' :
+      diff < 0 ? 'down' :
+      'neutral',
   };
 }
 }
