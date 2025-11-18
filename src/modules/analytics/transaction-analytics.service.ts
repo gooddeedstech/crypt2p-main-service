@@ -147,68 +147,95 @@ export class TransactionAnalyticsService {
   /* -----------------------------------------------------------
    🪙 TRANSACTION SUMMARY BY ASSET
   ------------------------------------------------------------*/
+// async getSummaryByAsset(options: {
+//   date?: 'today' | 'week' | 'month' | 'year';
+//   type?: CryptoTransactionType;
+//   asset?: string;
+//   status?: CryptoTransactionStatus;
+// }) {
+//   const { date, type, asset, status } = options;
+
+//   const range = this.buildDateRange(date);
+
+//   const qb = this.txRepo
+//     .createQueryBuilder('tx')
+//     .select('tx.asset', 'asset')
+//     .addSelect('COUNT(tx.id)', 'count')
+//     .addSelect('SUM(tx.amount)', 'totalAmount')
+//     .groupBy('tx.asset')
+//     .orderBy('"totalAmount"', 'DESC'); // 🔥 FIX alias issue
+
+//   // Filter: type of transaction
+//   if (type) qb.andWhere('tx.type = :type', { type });
+
+//   // Filter: asset
+//   if (asset) qb.andWhere('tx.asset = :asset', { asset });
+
+//   // Filter: status
+//   if (status) qb.andWhere('tx.status = :status', { status });
+
+//   // Filter: date range
+//   if (range) qb.andWhere('tx.created_at BETWEEN :start AND :end', range);
+
+//   const raw = await qb.getRawMany();
+
+//   return raw.map((r) => ({
+//     asset: r.asset,
+//     count: Number(r.count),
+//     totalAmount: Number(r.totalamount || r.totalAmount || 0),
+//   }));
+// }
+
+
 async getSummaryByAsset(options: {
   date?: 'today' | 'week' | 'month' | 'year';
   type?: CryptoTransactionType;
   asset?: string;
   status?: CryptoTransactionStatus;
 }) {
-  const { date, type, asset } = options;
+  const { date, type, asset, status } = options;
 
   const range = this.buildDateRange(date);
 
   const qb = this.txRepo
     .createQueryBuilder('tx')
     .select('tx.asset', 'asset')
-    .addSelect('COUNT(tx.id)', 'count');
+    .addSelect('COUNT(tx.id)', 'count')
+    .groupBy('tx.asset');
 
-  // ------------------------------------------------------
-  // If CASH_TO_CRYPTO → sum(amount + convert_amount)
-  // Else → sum(amount)
-  // ------------------------------------------------------
+  // -----------------------------------------------------
+  // 🔥 SPECIAL CASE: CASH_TO_CRYPTO → use convert_amount
+  // -----------------------------------------------------
   if (type === CryptoTransactionType.CASH_TO_CRYPTO) {
-    qb.addSelect(
-      'SUM(tx.amount + COALESCE(tx.convert_amount, 0))',
-      'totalAmount',
-    );
+    qb.addSelect('SUM(COALESCE(tx.convert_amount, 0))', 'totalAmount');
   } else {
-    qb.addSelect('SUM(tx.amount)', 'totalAmount');
+    qb.addSelect('SUM(COALESCE(tx.amount, 0))', 'totalAmount');
   }
 
-  qb.groupBy('tx.asset')
-    .orderBy('totalAmount', 'DESC');
+  // Sorting
+  qb.orderBy('"totalAmount"', 'DESC');
 
-  // ------------------------------------------------------
-  // 1. Always show only SUCCESSFUL transactions
-  // ------------------------------------------------------
-  qb.andWhere('tx.status = :successful', {
-    successful: CryptoTransactionStatus.SUCCESSFUL,
+  // -----------------------------------------------------
+  // Filters
+  // -----------------------------------------------------
+
+  // Always show only SUCCESSFUL transactions
+  qb.andWhere('tx.status = :status', {
+    status: CryptoTransactionStatus.SUCCESSFUL,
   });
 
-  // ------------------------------------------------------
-  // 2. If type filter provided
-  // ------------------------------------------------------
-  if (type) {
-    qb.andWhere('tx.type = :type', { type });
-  }
+  // Filter: type
+  if (type) qb.andWhere('tx.type = :type', { type });
 
-  // ------------------------------------------------------
-  // 3. Filter by Asset
-  // ------------------------------------------------------
-  if (asset) {
-    qb.andWhere('tx.asset = :asset', { asset });
-  } 
+  // Filter: asset
+  if (asset) qb.andWhere('tx.asset = :asset', { asset });
 
-  // ------------------------------------------------------
-  // 4. Date Range
-  // ------------------------------------------------------
-  if (range) {
-    qb.andWhere('tx.created_at BETWEEN :start AND :end', range);
-  }
+  // Filter: date range
+  if (range) qb.andWhere('tx.created_at BETWEEN :start AND :end', range);
 
   const raw = await qb.getRawMany();
 
-  return raw.map(r => ({
+  return raw.map((r) => ({
     asset: r.asset,
     count: Number(r.count),
     totalAmount: Number(r.totalamount || r.totalAmount || 0),
