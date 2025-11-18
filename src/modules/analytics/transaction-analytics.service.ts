@@ -197,7 +197,7 @@ async getSummaryByAsset(options: {
   // ------------------------------------------------------
   if (asset) {
     qb.andWhere('tx.asset = :asset', { asset });
-  }
+  } 
 
   // ------------------------------------------------------
   // 4. Date Range
