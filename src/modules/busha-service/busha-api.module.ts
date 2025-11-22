@@ -31,12 +31,15 @@ import { LoginLog } from '@/entities/login-log.entity';
 import { LedgerMessageController } from '../transaction-ledger/transaction-ledger.controller';
 import { LedgerService } from '../transaction-ledger/transaction-ledger.service';
 import { TransactionLedger } from '@/entities/transaction_ledger.entity';
+import { CoinbaseService } from '../coinbase/market/coinbase.service';
+import { PriceCacheService } from '../coinbase/market/price-cache.service';
+import { ExchangeRateService } from '../coinbase/market/exchange-rate.service';
 
  
 @Module({
   imports: [TypeOrmModule.forFeature([ User, Fee, TransactionLedger, PasswordReset, LoginLog,  EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig, BankDetail]), HttpModule],
   
-  providers: [BushaAPIService, JwtService,LedgerService,  EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  providers: [BushaAPIService,CoinbaseService, PriceCacheService,ExchangeRateService,  JwtService,LedgerService,  EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
   controllers: [BushaAPIMessageController, LedgerMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
   exports: [BushaAPIService],
 })

@@ -27,15 +27,4 @@ export class BushaBuyMessageController {
     }
   }
 
-  /** ⚡ Handle Busha webhook event for Naira funds confirmation */
-  @MessagePattern({ cmd: 'busha.buy.webhook' })
-  async handleBushaWebhook(@Payload() payload: any) {
-    try {
-      this.logger.log(`📩 [busha.buy.webhook] Received Busha webhook`);
-      return await this.bushaBuyService.processBushaNairaWebhook(payload);
-    } catch (error) {
-      this.logger.error(`❌ handleBushaWebhook error: ${error.message}`);
-      throw new RpcException(error);
-    }
-  }
 }

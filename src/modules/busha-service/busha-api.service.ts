@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { AssetListDto } from './dto/asset.dto';
 import { SystemConfigService } from '../system-settings/system-config.service';
 import { ConfigStatus } from '@/entities/system-config.entity';
+import { CoinbaseService } from '../coinbase/market/coinbase.service';
+import { ExchangeRateService } from '../coinbase/market/exchange-rate.service';
 
 @Injectable()
 export class BushaAPIService {
@@ -19,6 +21,8 @@ export class BushaAPIService {
     private readonly assetRepo: Repository<Asset>,
     private readonly http: HttpService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly coinbaseService: CoinbaseService,
+    private readonly exchangeRateService: ExchangeRateService,
   ) {}
 
   
@@ -69,8 +73,8 @@ const gain = isMarginEnabled ? marginValue : 0;
       id: usdtPair.id,
       base: usdtPair.base,
       counter: usdtPair.counter,
-      buyPrice: Number(usdtPair.buy_price.amount) + gain,
-      sellPrice: Number(usdtPair.sell_price.amount) - gain,
+      buyPrice: Number(usdtPair.buy_price.amount) - gain,
+      sellPrice: Number(usdtPair.sell_price.amount) + gain,
      
     };
 
@@ -130,8 +134,8 @@ async getRateInUSDT(asset: string) {
         id: pair.id,
         base: pair.base,
         counter: pair.counter,
-        buyPrice: Number(pair.buy_price.amount) + gain,
-        sellPrice: Number(pair.sell_price.amount) - gain,
+        buyPrice: Number(pair.buy_price.amount) - gain,
+        sellPrice: Number(pair.sell_price.amount) + gain,
         minBuy: pair.min_buy_amount.amount ,
       maxBuy: pair.max_buy_amount.amount ,
       minSell: pair.min_sell_amount.amount ,
@@ -158,6 +162,11 @@ async getRateInUSDT(asset: string) {
 async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDto[]> {
   // ✅ 1️⃣ Prepare DB filter
  
+//   const coinBase = await this.coinbaseService.getPrice('BTC')
+// console.log(`OIZA ${JSON.stringify(coinBase)}`)
+// const exchnageRate = await this.exchangeRateService.getUsdToNgn()
+// console.log(`MEYI ${JSON.stringify(exchnageRate)}`)
+
   const whereCondition: any = { is_active: true };
   if (type) whereCondition.type = type;
   if(asset) whereCondition.code = asset;
@@ -167,10 +176,8 @@ async listAllActiveAssets(type?: AssetType, asset?: string): Promise<AssetListDt
     order: { order: 'ASC' },
   });
 
-
   const baseAsset = asset || 'USDT';
   const exchange = await this.listBuyPairs();
-
 
   // ✅ 4️⃣ Map response dynamically
 const results = await Promise.all(
@@ -192,8 +199,9 @@ const results = await Promise.all(
           name: n.name,
           value: n.value,
         })) || [],
-      usdBuyPrice: usdAsset.buyPrice,
-      usdSellPrice: usdAsset.sellPrice,
+        // change this with next push
+      usdBuyPrice: usdAsset.sellPrice,
+      usdSellPrice: usdAsset.buyPrice,
       ngnBuyPrice: exchange.buyPrice - Number(a.margin),
       ngnSellPrice: exchange.sellPrice - Number(a.margin),
       minBuyValue: Number(usdAsset.minBuy),

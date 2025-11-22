@@ -8,7 +8,8 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { BankDetail } from './bank-detail.entity';
-import { User } from './user.entity'; // ✅ import user
+import { User } from './user.entity'; 
+
 
 export enum CryptoTransactionStatus {
   PENDING = 'PENDING',

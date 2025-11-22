@@ -26,6 +26,7 @@ import { RubiesModule } from './modules/rubies/rubies.module';
 import { LoginLogService } from './modules/onboarding/login-log.service';
 import { LoginLog } from './entities/login-log.entity';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
+import { MarketModule } from './modules/coinbase/market/market.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
     BushaAPIModule,
     RubiesModule,
     AdminAuthModule,
+   // MarketModule,
   ],
 
   providers: [OnboardingService, EmailService, PaystackService, LoginLogService],
