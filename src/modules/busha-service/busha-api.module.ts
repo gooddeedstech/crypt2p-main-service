@@ -34,12 +34,13 @@ import { TransactionLedger } from '@/entities/transaction_ledger.entity';
 import { CoinbaseService } from '../coinbase/market/coinbase.service';
 import { PriceCacheService } from '../coinbase/market/price-cache.service';
 import { ExchangeRateService } from '../coinbase/market/exchange-rate.service';
+import { BushaTransactionService } from './transaction-confirmation/transaction-confirmation.service';
 
  
 @Module({
   imports: [TypeOrmModule.forFeature([ User, Fee, TransactionLedger, PasswordReset, LoginLog,  EmailVerification,  WebhookEvent, Asset, CryptoTransaction, SystemConfig, BankDetail]), HttpModule],
   
-  providers: [BushaAPIService,CoinbaseService, PriceCacheService,ExchangeRateService,  JwtService,LedgerService,  EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
+  providers: [BushaAPIService,CoinbaseService, BushaTransactionService, PriceCacheService,ExchangeRateService,  JwtService,LedgerService,  EmailService, PaystackService, FeesService, BushaBuyService , LoginLogService, BushaWalletService, BushaDepositService, SystemConfigService, RubiesBankMapperService, RubiesService, OnboardingService],
   controllers: [BushaAPIMessageController, LedgerMessageController, BushaWebhookMessageController, BushaBuyMessageController, FeesMessageController],
   exports: [BushaAPIService],
 })
