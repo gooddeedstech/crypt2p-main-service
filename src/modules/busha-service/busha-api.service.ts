@@ -71,11 +71,11 @@ const marginValue = Number(marginSetting?.ngnValue || 0);
 // ✅ Determine gain based on config status
 const gain = isMarginEnabled ? marginValue : 0;
 
-const baseBuyPrice = Number(usdtPair.buy_price.amount) - gain;
+const baseSellPrice = Number(usdtPair.sell_price.amount) + gain;
 
-const buyPrice = isRateEnabled
+const sellPrice = isRateEnabled
   ? Number(rateSetting?.ngnValue || 0)
-  : baseBuyPrice;
+  : baseSellPrice;
 
 
 
@@ -83,8 +83,8 @@ const buyPrice = isRateEnabled
       id: usdtPair.id,
       base: usdtPair.base,
       counter: usdtPair.counter,
-      buyPrice: buyPrice,
-      sellPrice: Number(usdtPair.sell_price.amount) + gain,
+      buyPrice: Number(usdtPair.buy_price.amount) - gain,
+      sellPrice: sellPrice,
      
     };
 
